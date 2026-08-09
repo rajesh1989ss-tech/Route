@@ -561,8 +561,12 @@ table.sched td.r{text-align:right}
   <div class="pane" id="pAis">
     <h3>Source</h3>
     <p class="hint">A browser cannot open a raw TCP or UDP socket, so it cannot reach the transponder
-      directly. Run <code>nmea-bridge.py</code> (in this repository) on any laptop or phone on the
-      ship's WiFi and it will hand the feed to this app.</p>
+      directly. Run <code>nmea-bridge.py</code> (in this repository) on any laptop or phone joined to
+      the pilot plug's WiFi and it will hand the feed to this app.</p>
+    <p class="hint" style="margin-top:8px">For the <b>KSNTEK KSN11-W</b> fitted onboard:<br>
+      <code>python3 nmea-bridge.py --ksn11w</code><br>
+      that is TCP <code>192.168.1.1</code> port <code>8888</code>. If it has been reconfigured, use
+      <code>--scan</code> and it will find it.</p>
     <div class="field" style="margin-top:10px"><label class="eyebrow">Feed</label>
       <select id="selAisSrc">
         <option value="ws">WebSocket bridge</option>
@@ -571,7 +575,7 @@ table.sched td.r{text-align:right}
       </select></div>
     <div id="aisWs">
       <div class="field"><label class="eyebrow">Bridge address</label>
-        <input type="text" id="inAisUrl" placeholder="ws://192.168.1.50:8080/nmea" spellcheck="false"></div>
+        <input type="text" id="inAisUrl" placeholder="ws://192.168.1.23:8080/nmea" spellcheck="false"></div>
     </div>
     <div id="aisSerial" style="display:none">
       <div class="field"><label class="eyebrow">Baud rate</label><input type="number" id="inBaud" value="38400" step="1200"></div>

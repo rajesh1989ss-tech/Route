@@ -29,8 +29,10 @@ GPS only works over `https`, which GitHub Pages provides.
 A browser cannot open a raw TCP or UDP socket, so it cannot read a WiFi AIS
 transponder directly. Run the bridge on any machine on the ship's WiFi:
 
-    python3 nmea-bridge.py --tcp 192.168.1.1:39150      # most transponders
-    python3 nmea-bridge.py --udp 10110                  # units that broadcast
+    python3 nmea-bridge.py --ksn11w      # KSNTEK KSN11-W (tcp 192.168.1.1:8888)
+    python3 nmea-bridge.py --scan        # find the transponder automatically
+    python3 nmea-bridge.py --tcp 192.168.1.1:8888
+    python3 nmea-bridge.py --udp 10110   # units that broadcast
 
 Python 3.7+ and the standard library only — nothing to install. It prints the
 two addresses you need: one to open Rhumb, one to paste into AIS → Source.

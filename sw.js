@@ -1,5 +1,5 @@
 /* Rhumb service worker — everything is precached so the app runs with no signal at sea. */
-const VERSION = 'rhumb-v6';
+const VERSION = 'rhumb-v7';
 const ASSETS = [
   './',
   './index.html',

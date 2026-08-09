@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#05090B">
 <meta name="description" content="Offline passage plan monitor: import ECDIS route files, track SOG, COG, distance to go, ETA and cross-track error on a vector chart that needs no internet.">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -199,6 +199,14 @@ body.banner #dash{top:158px;max-height:calc(100vh - 274px)}
 .rangeRow{display:flex;align-items:center;gap:10px}
 .rangeRow input[type=range]{flex:1;accent-color:var(--route)}
 .rangeRow b{font-family:var(--mono);font-size:12px;min-width:44px;text-align:right}
+.dg{display:flex;gap:9px;align-items:flex-start;padding:8px 9px;border:1px solid var(--line);
+  border-radius:8px;margin-bottom:6px;background:var(--input)}
+.dg .m{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;flex:none;margin-top:1px;font-weight:700}
+.dg.ok .m{background:color-mix(in srgb,var(--own) 22%,transparent);color:var(--own)}
+.dg.no .m{background:color-mix(in srgb,var(--alert) 22%,transparent);color:var(--alert)}
+.dg.warn .m{background:color-mix(in srgb,var(--amber) 22%,transparent);color:var(--amber)}
+.dg b{display:block;font-size:11.5px;font-weight:600}
+.dg span{display:block;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:2px;word-break:break-all}
 
 /* passage strip */
 #ruler{position:fixed;left:0;right:0;bottom:0;z-index:16;padding:10px 12px 12px;
@@ -549,6 +557,11 @@ table.sched td.r{text-align:right}
     <p class="hint">The slim bar at the top always stays. Tap it to bring the full dashboard back, or pin it open with the 📌.</p>
     <h3>Track</h3>
     <div class="toggle"><span>Colour the sailed track by speed</span><div class="sw on" id="swSpd"></div></div>
+    <h3>Install check</h3>
+    <p class="hint">If Chrome offers "Add to Home screen" instead of "Install app", it is making a bookmark,
+      not installing the app. This tells you which requirement is failing.</p>
+    <div class="row" style="margin-top:9px"><button class="btn" id="btnDiag">Run the check</button></div>
+    <div id="diagBox" style="margin-top:10px"></div>
     <h3>Alarms</h3>
     <div class="toggle"><span>Cross-track limit exceeded</span><div class="sw on" id="swXte"></div></div>
     <div class="toggle"><span>Waypoint approach</span><div class="sw on" id="swWp"></div></div>
@@ -2565,21 +2578,107 @@ function openReport(kind){
 }
 
 /* ---------------- install & offline ---------------- */
-let installPrompt=null;
+let installPrompt=null, swError=null, swReg=null;
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault(); installPrompt=e; $('btnInstall').style.display='';
+  $('btnInstall').classList.add('on');
 });
 $('btnInstall').onclick=async()=>{
-  if(!installPrompt){ toast('Use the browser menu → Install app'); return; }
-  installPrompt.prompt();
-  const {outcome}=await installPrompt.userChoice;
-  installPrompt=null; $('btnInstall').style.display='none';
-  if(outcome==='accepted') toast('Rhumb installed — it will now open offline');
+  if(installPrompt){
+    installPrompt.prompt();
+    const {outcome}=await installPrompt.userChoice;
+    installPrompt=null; $('btnInstall').style.display='none';
+    if(outcome==='accepted') toast('Rhumb installed — it will now open offline');
+    return;
+  }
+  openDrawer(true);
+  document.querySelector('.tab[data-p="pSet"]').click();
+  runDiag();
+  setTimeout(()=>{const d=$('diagBox'); if(d.scrollIntoView) d.scrollIntoView({behavior:'smooth',block:'center'});},120);
 };
-window.addEventListener('appinstalled',()=>{ $('btnInstall').style.display='none'; });
-if('serviceWorker' in navigator && location.protocol.startsWith('http')){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+window.addEventListener('appinstalled',()=>{ $('btnInstall').style.display='none'; toast('Installed'); });
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js',{scope:'./'})
+      .then(r=>{swReg=r;})
+      .catch(e=>{swError=e.message;});
+  });
+} else if(location.protocol!=='https:'){
+  swError='the page is not on https (protocol is '+location.protocol+')';
 }
+
+/* Tells you exactly which install requirement is failing, instead of guessing. */
+async function runDiag(){
+  const box=$('diagBox');
+  box.innerHTML='<p class="hint">Checking…</p>';
+  const R=[];
+  const add=(state,label,detail)=>R.push({state,label,detail:detail||''});
+
+  if(isStandalone()) add('ok','Already running as an installed app','you are inside the installed window right now');
+  add(location.protocol==='https:'?'ok':'no','Served over https',location.origin+location.pathname);
+
+  // a missing trailing slash breaks every relative path on the page
+  const manUrl=new URL('manifest.json',location.href).href;
+  const looksLikeDir=!/\.[a-z]{2,5}$/i.test(location.pathname);
+  if(looksLikeDir && !location.pathname.endsWith('/'))
+    add('no','Address ends with a slash','manifest would be looked for at '+manUrl+' — add a trailing slash to the address');
+  else add('ok','Relative paths resolve here',manUrl);
+
+  const link=document.querySelector('link[rel=manifest]');
+  let man=null;
+  if(!link) add('no','Manifest is linked in the page');
+  else{
+    try{
+      const r=await fetch(link.href,{cache:'no-cache'});
+      add(r.ok?'ok':'no','Manifest downloads',r.status+' '+r.statusText+' · '+(r.headers.get('content-type')||'no content-type'));
+      if(r.ok){
+        const txt=await r.text();
+        try{ man=JSON.parse(txt); add('ok','Manifest is valid JSON'); }
+        catch(e){ add('no','Manifest is valid JSON',e.message+' — first bytes: '+txt.slice(0,40)); }
+      }
+    }catch(e){ add('no','Manifest downloads',e.message); }
+  }
+  if(man){
+    add(man.name||man.short_name?'ok':'no','Manifest has a name',man.name||man.short_name||'');
+    add(['standalone','fullscreen','minimal-ui'].includes(man.display)?'ok':'no','display is standalone',String(man.display));
+    const pngs=(man.icons||[]).filter(i=>/png/i.test(i.type||'')||/\.png(\?|$)/i.test(i.src||''));
+    const sz=i=>Math.max(0,...String(i.sizes||'').split(/\s+/).map(s=>parseInt(s)||0));
+    add(pngs.some(i=>sz(i)>=192)&&pngs.some(i=>sz(i)>=512)?'ok':'no','PNG icons at 192 and 512 px',
+        pngs.map(i=>i.sizes).join(', ')||'none declared');
+    for(const i of pngs){
+      try{ const r=await fetch(new URL(i.src,link.href),{cache:'no-cache'});
+        add(r.ok?'ok':'no','Icon '+i.src,r.status+' '+r.statusText);
+      }catch(e){ add('no','Icon '+i.src,e.message); }
+    }
+    try{ const u=new URL(man.start_url||'./',link.href);
+      const r=await fetch(u,{cache:'no-cache'});
+      add(r.ok?'ok':'no','start_url loads',u.href+' → '+r.status);
+    }catch(e){ add('no','start_url loads',e.message); }
+  }
+
+  if(!('serviceWorker' in navigator)) add('no','Service workers supported','this browser has none');
+  else{
+    let regs=[];
+    try{ regs=await navigator.serviceWorker.getRegistrations(); }catch(e){}
+    add(regs.length?'ok':'no','Service worker registered',
+        regs.length? regs.map(r=>r.scope).join(', ') : (swError||'registration has not completed'));
+    add(navigator.serviceWorker.controller?'ok':'warn','Service worker controls this page',
+        navigator.serviceWorker.controller? 'yes' : 'not yet — reload the page once, then check again');
+  }
+  add(installPrompt?'ok':(isStandalone()?'ok':'warn'),'Chrome has offered to install',
+      installPrompt? 'ready — the ⤓ button will install it'
+      : isStandalone()? 'already installed'
+      : 'not offered yet. Fix anything red above, reload twice, then look in the ⋮ menu for "Install app"');
+
+  const bad=R.filter(r=>r.state==='no').length;
+  box.innerHTML=R.map(r=>'<div class="dg '+r.state+'"><div class="m">'+
+      (r.state==='ok'?'✓':r.state==='no'?'✕':'!')+'</div><div style="min-width:0"><b>'+esc(r.label)+'</b>'+
+      (r.detail?'<span>'+esc(r.detail)+'</span>':'')+'</div></div>').join('')+
+    '<p class="hint" style="margin-top:8px">'+(bad? bad+' requirement'+(bad>1?'s are':' is')+' failing — Chrome will only make a bookmark until '+(bad>1?'they are':'it is')+' fixed.'
+      : 'Everything Chrome needs is in place. If it still offers only a bookmark, reload the page twice — Chrome wants the service worker to be in control first.')+'</p>';
+}
+$('btnDiag').onclick=runDiag;
 
 /* boot */
 refreshColors();
@@ -2606,6 +2705,7 @@ if(window.innerWidth>820 && S.hud==='auto') S.hud='always';
 $('selHud').value=S.hud; $('inDwell').value=S.dwell; $('dwellLbl').textContent=S.dwell+' s';
 $('inFade').value=S.fade; $('fadeLbl').textContent=S.fade+' ms';
 applyFade(); applyHudMode();
+if(!isStandalone() && location.protocol==='https:') $('btnInstall').style.display='';
 setInterval(()=>{ if(S.fix) paint(); },10000);
 </script>
 </body>

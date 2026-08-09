@@ -1,8 +1,9 @@
 /* Rhumb service worker — everything is precached so the app runs with no signal at sea. */
-const VERSION = 'rhumb-v2';
+const VERSION = 'rhumb-v3';
 const ASSETS = [
   './',
   './index.html',
+  './manifest.json',
   './manifest.webmanifest',
   './icon.svg',
   './favicon.ico',

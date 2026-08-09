@@ -1,5 +1,5 @@
 /* Rhumb service worker — everything is precached so the app runs with no signal at sea. */
-const VERSION = 'rhumb-v3';
+const VERSION = 'rhumb-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -7,11 +7,11 @@ const ASSETS = [
   './manifest.webmanifest',
   './icon.svg',
   './favicon.ico',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-maskable-512.png',
-  './icons/apple-touch-icon.png',
-  './icons/favicon-32.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png',
+  './apple-touch-icon.png',
+  './favicon-32.png',
   './icons/favicon-16.png'
 ];
 

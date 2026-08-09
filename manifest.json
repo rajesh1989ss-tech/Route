@@ -1,7 +1,7 @@
 {
   "name": "Rhumb — Passage Monitor",
   "short_name": "Rhumb",
-  "description": "Offline passage plan monitor: import ECDIS route files, track SOG, COG, distance to go, ETA and cross-track error on a vector chart that needs no internet.",
+  "description": "Offline passage plan monitor: import ECDIS route files, track SOG, COG, distance to go, ETA, AIS targets and cross-track error on a vector chart that needs no internet.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,8 +9,8 @@
   "background_color": "#05090B",
   "theme_color": "#05090B",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Rhumb">
@@ -250,7 +250,7 @@ body.banner #dash{top:158px;max-height:calc(100vh - 274px)}
   padding-top:calc(12px + env(safe-area-inset-top))}
 #drawer header h2{margin:0;font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;flex:1}
 .tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
-.tab{flex:1;padding:10px 1px;font-size:9px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;
+.tab{flex:1;padding:10px 0;font-size:8.5px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;
   font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 .tab.on{color:var(--route);border-bottom-color:var(--route)}
 .pane{flex:1;overflow:auto;padding:14px;display:none;-webkit-overflow-scrolling:touch}
@@ -388,7 +388,7 @@ table.sched td.r{text-align:right}
     </div>
     <div class="cell"><div class="eyebrow">Distance to go</div><div class="val" id="vDtg">—<small>NM</small></div></div>
     <div class="cell"><div class="eyebrow">Time to go</div><div class="val" id="vTtg">—</div></div>
-    <div class="cell"><div class="eyebrow">ETA destination</div><div class="val sm" id="vEta">—</div></div>
+    <div class="cell"><div class="eyebrow">ETA dest · <span id="vEtaZone" style="text-transform:none;letter-spacing:0">ship’s time</span></div><div class="val sm" id="vEta">—</div></div>
     <div class="cell"><div class="eyebrow">Speed made good</div><div class="val" id="vSmg">—<small>kn</small></div></div>
   </div>
 
@@ -407,7 +407,8 @@ table.sched td.r{text-align:right}
       </div>
       <div class="xte-bar"><i id="xteMark"></i></div>
     </div>
-    <div class="wide"><div class="eyebrow">Position</div><div class="val sm" id="vPos" style="margin-top:2px">no fix</div></div>
+    <div class="wide"><div class="eyebrow">Position</div><div class="val sm" id="vPos" style="margin-top:2px">no fix</div>
+      <div class="eyebrow" id="vSun" style="margin-top:6px;letter-spacing:.06em"></div></div>
   </div>
 
   <div class="card grid2" id="statCard">
@@ -415,6 +416,8 @@ table.sched td.r{text-align:right}
     <div class="cell"><div class="eyebrow">Distance run</div><div class="val sm" id="vRun">—<small>NM</small></div></div>
     <div class="cell"><div class="eyebrow">Best SOG</div><div class="val sm" id="vMax">—<small>kn</small></div></div>
     <div class="cell"><div class="eyebrow">Legs done</div><div class="val sm" id="vLegs">—</div></div>
+    <div class="cell"><div class="eyebrow">Average, under way</div><div class="val sm" id="vAvg">—<small>kn</small></div></div>
+    <div class="cell"><div class="eyebrow">GPS coverage</div><div class="val sm" id="vCov">—<small>%</small></div></div>
   </div>
 </div>
 
@@ -423,7 +426,8 @@ table.sched td.r{text-align:right}
   <button class="rbtn" id="btnOut" title="Zoom out">−</button>
   <button class="rbtn" id="btnFit" title="Fit passage (F)">⤢</button>
   <button class="rbtn" id="btnFollow" title="Centre on ship">⌖</button>
-  <button class="rbtn" id="btnMeasure" title="Measure range and bearing (M)">⇔</button>
+  <button class="rbtn" id="btnMeasure" title="Measure along the chart (M) — tap to add legs">⇔</button>
+  <button class="rbtn on" id="btnAis" title="Show or hide AIS targets">◈</button>
   <button class="rbtn" id="btnWake" title="Keep the screen awake">☾</button>
   <button class="rbtn" id="btnSim" title="Simulate the passage">▶</button>
 </div>
@@ -452,7 +456,9 @@ table.sched td.r{text-align:right}
     <button class="tab on" data-p="pRoute">Route</button>
     <button class="tab" data-p="pImp">Import</button>
     <button class="tab" data-p="pLog">Log</button>
-    <button class="tab" data-p="pRep">Reports</button>
+    <button class="tab" data-p="pSun">Sun</button>
+    <button class="tab" data-p="pAis">AIS</button>
+    <button class="tab" data-p="pRep">Report</button>
     <button class="tab" data-p="pSet">Setup</button>
     <button class="tab" data-p="pFile">Files</button>
   </div>
@@ -466,7 +472,22 @@ table.sched td.r{text-align:right}
       <button class="btn sm" id="btnSnap">Snap to nearest leg</button>
       <button class="btn sm danger" id="btnClear">Clear all</button>
     </div>
+    <h3>Distance &amp; ETA calculator</h3>
+    <div class="half">
+      <div class="field"><label class="eyebrow">From</label><select id="calcFrom"></select></div>
+      <div class="field"><label class="eyebrow">To</label><select id="calcTo"></select></div>
+    </div>
+    <div class="field"><label class="eyebrow">At what speed</label>
+      <div class="rangeRow"><input type="number" id="calcSpd" step="0.1" min="0.1" style="flex:1">
+        <button class="btn sm" data-spd="sog" title="Present speed over ground">SOG</button>
+        <button class="btn sm" data-spd="plan" title="Planned speed">Plan</button>
+        <button class="btn sm" data-spd="avg" title="Average made good so far">Avg</button></div></div>
+    <div id="calcOut"></div>
+
     <h3>Schedule</h3>
+    <div class="field"><label class="eyebrow">Recalculate the whole schedule at</label>
+      <div class="rangeRow"><input type="number" id="schedSpd" step="0.1" min="0.1" placeholder="live speed" style="flex:1">
+        <button class="btn sm" id="schedReset">Reset</button></div></div>
     <div id="schedBox"></div>
     <div class="row" style="margin-top:10px"><button class="btn sm" id="btnSchedCsv">Download schedule (CSV)</button></div>
     <p class="hint" style="margin-top:10px">Tap a waypoint to make it the next one and centre the chart on it.</p>
@@ -515,6 +536,69 @@ table.sched td.r{text-align:right}
     </div>
   </div>
 
+  <div class="pane" id="pSun">
+    <h3>Where and when</h3>
+    <div class="half">
+      <div class="field"><label class="eyebrow">Position</label><select id="sunWhere"></select></div>
+      <div class="field"><label class="eyebrow">Day</label>
+        <div class="rangeRow"><button class="btn sm" id="sunPrev">‹</button>
+          <b id="sunDate" style="flex:1;text-align:center;min-width:0">today</b>
+          <button class="btn sm" id="sunNext">›</button></div></div>
+    </div>
+    <div id="sunOut"></div>
+    <h3>Compass error by amplitude</h3>
+    <p class="hint">Take the sun’s compass bearing as its lower limb sits half a diameter above the horizon,
+      then enter it here. The difference from the true bearing above is the compass error.</p>
+    <div class="half" style="margin-top:9px">
+      <div class="field"><label class="eyebrow">Observed at</label>
+        <select id="ampWhen"><option value="rise">Sunrise</option><option value="set">Sunset</option></select></div>
+      <div class="field"><label class="eyebrow">Compass bearing</label>
+        <input type="number" id="ampObs" step="0.1" min="0" max="360" placeholder="e.g. 071.5"></div>
+    </div>
+    <div id="ampOut"></div>
+  </div>
+
+  <div class="pane" id="pAis">
+    <h3>Source</h3>
+    <p class="hint">A browser cannot open a raw TCP or UDP socket, so it cannot reach the transponder
+      directly. Run <code>nmea-bridge.py</code> (in this repository) on any laptop or phone on the
+      ship's WiFi and it will hand the feed to this app.</p>
+    <div class="field" style="margin-top:10px"><label class="eyebrow">Feed</label>
+      <select id="selAisSrc">
+        <option value="ws">WebSocket bridge</option>
+        <option value="serial">USB serial (desktop Chrome)</option>
+        <option value="replay">Replay a recorded NMEA log</option>
+      </select></div>
+    <div id="aisWs">
+      <div class="field"><label class="eyebrow">Bridge address</label>
+        <input type="text" id="inAisUrl" placeholder="ws://192.168.1.50:8080/nmea" spellcheck="false"></div>
+    </div>
+    <div id="aisSerial" style="display:none">
+      <div class="field"><label class="eyebrow">Baud rate</label><input type="number" id="inBaud" value="38400" step="1200"></div>
+    </div>
+    <div id="aisReplay" style="display:none">
+      <div class="row"><button class="btn" id="btnAisFile">Choose a .nmea or .txt log…</button>
+        <input type="file" id="fileAis" accept=".nmea,.txt,.log,text/*" hidden></div>
+    </div>
+    <div class="row" style="margin-top:4px">
+      <button class="btn primary" id="btnAisConnect">Connect</button>
+      <button class="btn" id="btnAisStop">Disconnect</button>
+    </div>
+    <p class="hint" style="margin-top:9px">Status: <b id="aisState" style="font-family:var(--mono)">not connected</b></p>
+    <h3>Targets <span class="eyebrow" id="aisCount" style="float:right;text-transform:none"></span></h3>
+    <div id="aisBox"></div>
+    <h3>Collision warning</h3>
+    <div class="toggle"><span>Show targets on the chart</span><div class="sw on" id="swAisShow"></div></div>
+    <div class="toggle"><span>Warn on close quarters</span><div class="sw on" id="swAisAlarm"></div></div>
+    <div class="half" style="margin-top:10px">
+      <div class="field"><label class="eyebrow">CPA limit (NM)</label><input type="number" id="inCpa" value="1.0" step="0.1" min="0.1"></div>
+      <div class="field"><label class="eyebrow">TCPA limit (min)</label><input type="number" id="inTcpa" value="20" step="1" min="1"></div>
+    </div>
+    <div class="field"><label class="eyebrow">Drop a target after (min)</label><input type="number" id="inAisTo" value="12" step="1" min="2"></div>
+    <p class="hint">A target is flagged when its closest point of approach falls inside both limits.
+      This is an awareness aid — it is not an ARPA and carries no guarantee of detection.</p>
+  </div>
+
   <div class="pane" id="pRep">
     <h3>Reports</h3>
     <p class="hint">Each one opens as a print preview — use your browser's <b>Save as PDF</b> to keep it or attach it to an email.</p>
@@ -555,6 +639,7 @@ table.sched td.r{text-align:right}
     <div class="field"><label class="eyebrow">Fade speed</label>
       <div class="rangeRow"><input type="range" id="inFade" min="120" max="1600" step="20" value="440"><b id="fadeLbl">440 ms</b></div></div>
     <p class="hint">The slim bar at the top always stays. Tap it to bring the full dashboard back, or pin it open with the 📌.</p>
+    <div class="toggle"><span>Keep the screen on while running</span><div class="sw on" id="swWake"></div></div>
     <h3>Track</h3>
     <div class="toggle"><span>Colour the sailed track by speed</span><div class="sw on" id="swSpd"></div></div>
     <h3>Install check</h3>
@@ -578,6 +663,11 @@ table.sched td.r{text-align:right}
       <div class="field"><label class="eyebrow">Ship's clock, UTC±h</label><input type="number" id="inTz" value="0" step="0.5"></div>
     </div>
     <button class="btn sm" id="btnTzGuess" style="margin-bottom:12px">Set clock from longitude</button>
+    <div class="field"><label class="eyebrow">Destination time zone, UTC±h</label>
+      <div class="rangeRow"><input type="number" id="inTzDest" step="0.5" placeholder="same as ship" style="flex:1">
+        <button class="btn sm" id="btnTzDest">From arrival longitude</button></div></div>
+    <p class="hint" style="margin:-4px 0 12px">Leave it blank and every time is the ship’s clock. Set it and the
+      ETA for the destination is shown in the local time you will actually arrive to — waypoint ETAs stay on ship’s time.</p>
     <div class="field"><label class="eyebrow">Required arrival (ship's time)</label><input type="datetime-local" id="inTarget"></div>
     <div class="field"><label class="eyebrow">Speed needed to make it</label><div class="val sm" id="vReq">—</div></div>
     <h3>Tolerances</h3>
@@ -626,8 +716,8 @@ table.sched td.r{text-align:right}
       Once installed it opens full-screen and works with no signal — the chart, the code and the icons
       are all held on the device.</p>
     <h3>Keyboard</h3>
-    <p class="hint"><code>+</code> <code>−</code> zoom · <code>F</code> fit passage · <code>M</code> measure ·
-      <code>C</code> centre on ship · <code>L</code> log a fix · <code>T</code> theme · <code>Esc</code> close</p>
+    <p class="hint"><code>+</code> <code>−</code> zoom · <code>F</code> fit passage · <code>M</code> measure · <code>U</code> undo a leg ·
+      <code>C</code> centre on ship · <code>L</code> log a fix · <code>K</code> calculator · <code>S</code> sun · <code>T</code> theme · <code>Esc</code> close</p>
     <h3>Notes</h3>
     <p class="hint">
       The chart is a vector coastline held inside this file — it needs no internet and no chart licence.
@@ -706,8 +796,15 @@ function fmtShort(h){
   return s+Math.round(h*60)+'m';
 }
 const p2=n=>String(n).padStart(2,'0');
-function shipTime(ms){const d=new Date(ms+S.tz*3600e3);
+function zoneTime(ms,tz){const d=new Date(ms+tz*3600e3);
   return p2(d.getUTCDate())+'/'+p2(d.getUTCMonth()+1)+' '+p2(d.getUTCHours())+':'+p2(d.getUTCMinutes());}
+function zoneHM(ms,tz){if(ms==null) return '--:--';const d=new Date(ms+tz*3600e3);
+  return p2(d.getUTCHours())+':'+p2(d.getUTCMinutes());}
+const destTz=()=> S.tzDest==null? S.tz : S.tzDest;
+function tzLabel(tz){const s=tz<0?'-':'+',a=Math.abs(tz);
+  return 'UTC'+s+p2(Math.floor(a))+':'+p2(Math.round((a%1)*60));}
+function shipTime(ms){return zoneTime(ms,S.tz);}
+function destTime(ms){return zoneTime(ms,destTz());}
 function shipISO(ms){const d=new Date(ms+S.tz*3600e3);
   return d.getUTCFullYear()+'-'+p2(d.getUTCMonth()+1)+'-'+p2(d.getUTCDate())+' '+p2(d.getUTCHours())+':'+p2(d.getUTCMinutes());}
 function fmtNM(d){return d>=100?d.toFixed(0):d>=10?d.toFixed(1):d.toFixed(2);}
@@ -719,11 +816,13 @@ const S={
   name:'', wps:[], nextWp:1, snapped:false,
   fix:null, track:[], log:[], startedAt:null, runFromStart:0, maxSog:0, milestone:0,
   speedMode:'sog', planSpeed:12, tz:0, arrRad:.5, xtl:.5, legMode:'rl',
-  target:null, theme:'dark',
+  target:null, theme:'dark', schedSpeed:null, tzDest:null, sunWp:'here', sunDay:0,
   alXte:true, alWp:true, sound:true, acked:{},
   follow:false, sim:null, watchId:null, wake:null,
-  measure:{on:false,a:null,b:null,fixed:false},
+  measure:{on:false,pts:[],live:null},
   hud:'auto', dwell:8, fade:440, spdTrack:true, shore:null,
+  aisShow:true, aisAlarm:true, cpaLimit:1.0, tcpaLimit:20, aisTimeout:12, aisUrl:'', keepAwake:true,
+  rb:null,
   view:{clon:60, clat:20, s:60}
 };
 
@@ -782,7 +881,7 @@ function refreshColors(){
 function render(){
   dirty=false;
   ctx.fillStyle=COL['--sea']; ctx.fillRect(0,0,W,H);
-  drawGraticule(); drawLand(); drawTrack(); drawRoute(); drawShip(); drawMeasure(); updateScale();
+  drawGraticule(); drawLand(); drawTrack(); drawRoute(); drawAis(); drawShip(); drawRangeBearing(); drawMeasure(); updateScale();
 }
 
 const GRAT=[30,15,10,5,2,1,.5,.25,10/60,5/60,2/60,1/60,.5/60];
@@ -1012,16 +1111,55 @@ function drawShip(){
 }
 
 function drawMeasure(){
-  const m=S.measure; if(!m.on||!m.a||!m.b) return;
-  const x1=px(m.a.lon), y1=py(m.a.lat), x2=px(m.b.lon), y2=py(m.b.lat);
-  ctx.strokeStyle=COL['--own']; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
-  for(const [x,y] of [[x1,y1],[x2,y2]]){
-    ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fillStyle=COL['--sea']; ctx.fill();
-    ctx.strokeStyle=COL['--own']; ctx.lineWidth=1.5; ctx.stroke();
+  const m=S.measure; if(!m.on) return;
+  const pts=m.pts.concat(m.live&&m.pts.length?[m.live]:[]);
+  if(pts.length<1) return;
+  ctx.strokeStyle=COL['--own']; ctx.lineWidth=1.6; ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  pts.forEach((p,i)=>{ const x=px(p.lon), y=py(p.lat); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.font='600 10px '+COL['--mono'];
+  for(let i=1;i<pts.length;i++){
+    const r=rhumb(pts[i-1],pts[i]);
+    const x1=px(pts[i-1].lon), y1=py(pts[i-1].lat), x2=px(pts[i].lon), y2=py(pts[i].lat);
+    const mx=(x1+x2)/2, my=(y1+y2)/2;
+    if(r.dist<0.001) continue;
+    const label=deg3(r.brg)+' · '+fmtNM(r.dist)+' NM';
+    const w=ctx.measureText(label).width;
+    ctx.fillStyle=COL['--sea']; ctx.globalAlpha=.82;
+    ctx.fillRect(mx-w/2-4, my-14, w+8, 14);
+    ctx.globalAlpha=1; ctx.fillStyle=COL['--own'];
+    ctx.fillText(label, mx-w/2, my-4);
   }
+  pts.forEach((p,i)=>{
+    const x=px(p.lon), y=py(p.lat), last=i===pts.length-1;
+    ctx.beginPath(); ctx.arc(x,y,last?5:4,0,7);
+    ctx.fillStyle=COL['--sea']; ctx.fill();
+    ctx.strokeStyle=COL['--own']; ctx.lineWidth=1.8; ctx.stroke();
+    if(i<m.pts.length){
+      ctx.fillStyle=COL['--own']; ctx.font='600 9px '+COL['--sans'];
+      ctx.fillText(String(i+1), x+7, y+11);
+    }
+  });
 }
-
+/* long press anywhere: range and bearing from the ship to that spot */
+function drawRangeBearing(){
+  const rb=S.rb; if(!rb||!S.fix) return;
+  if(Date.now()-rb.t>20000){ S.rb=null; return; }
+  const x1=px(S.fix.lon), y1=py(S.fix.lat), x2=px(rb.p.lon), y2=py(rb.p.lat);
+  const r=rhumb(S.fix,rb.p);
+  ctx.strokeStyle=COL['--amber']; ctx.lineWidth=1.6; ctx.setLineDash([2,5]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(x2,y2,5,0,7); ctx.fillStyle=COL['--sea']; ctx.fill();
+  ctx.strokeStyle=COL['--amber']; ctx.lineWidth=1.8; ctx.stroke();
+  ctx.font='600 11px '+COL['--mono'];
+  const label=deg3(r.brg)+'  '+fmtNM(r.dist)+' NM';
+  const w=ctx.measureText(label).width;
+  ctx.fillStyle=COL['--sea']; ctx.globalAlpha=.88;
+  ctx.fillRect(x2+9, y2-22, w+10, 17);
+  ctx.globalAlpha=1; ctx.fillStyle=COL['--amber'];
+  ctx.fillText(label, x2+14, y2-10);
+}
 function updateScale(){
   const nmPerPx=(1/V.s)*R2D*60*Math.cos(V.clat*D2R);
   const target=110*nmPerPx;
@@ -1041,45 +1179,72 @@ function zoomAt(cx,cy,factor){
   draw();
 }
 let drag=null, pinch=null;
+let pressTimer=null;
 cv.addEventListener('pointerdown',e=>{
   if(e.pointerType==='touch'&&pinch) return;
   cv.setPointerCapture(e.pointerId);
   drag={x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false};
   cv.classList.add('dragging');
+  clearTimeout(pressTimer);
+  const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  pressTimer=setTimeout(()=>{
+    if(drag&&drag.moved) return;
+    if(!S.fix){ toast('No position yet — range and bearing needs a fix'); return; }
+    S.rb={p:{lat:latAt(my),lon:lonAt(mx)}, t:Date.now()};
+    const rr=rhumb(S.fix,S.rb.p);
+    toast(deg3(rr.brg)+'  ·  '+fmtNM(rr.dist)+' NM from the ship');
+    if(navigator.vibrate) navigator.vibrate(18);
+    drag=null; cv.classList.remove('dragging');
+    draw();
+  },480);
 });
+cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('pointermove',e=>{
   const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
   $('cursorpos').textContent=fmtLat(latAt(my))+'   '+fmtLon(lonAt(mx));
-  if(S.measure.on&&S.measure.a&&!S.measure.fixed){
-    S.measure.b={lat:latAt(my),lon:lonAt(mx)}; showMeasure(); draw();
+  if(S.measure.on&&S.measure.pts.length&&e.pointerType!=='touch'){
+    S.measure.live={lat:latAt(my),lon:lonAt(mx)}; showMeasure(); draw();
   }
   if(!drag) return;
   const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
   if(Math.abs(e.clientX-drag.sx)+Math.abs(e.clientY-drag.sy)>4){
-    drag.moved=true; if(S.follow) setFollow(false);
+    drag.moved=true; clearTimeout(pressTimer); if(S.follow) setFollow(false);
   }
   V.clon=wrap180(V.clon-dx/V.s*R2D);
   V.clat=clamp(latOfMy(myOf(V.clat)+dy/V.s),-84,84);
   drag.x=e.clientX; drag.y=e.clientY; draw();
 });
 cv.addEventListener('pointerup',e=>{
-  if(drag&&!drag.moved&&S.measure.on){
-    const r=cv.getBoundingClientRect();
-    const p={lat:latAt(e.clientY-r.top), lon:lonAt(e.clientX-r.left)};
-    if(!S.measure.a||S.measure.fixed){ S.measure.a=p; S.measure.b=p; S.measure.fixed=false; }
-    else { S.measure.b=p; S.measure.fixed=true; }
-    showMeasure(); draw();
+  clearTimeout(pressTimer);
+  if(drag&&!drag.moved){
+    const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+    const p={lat:latAt(my), lon:lonAt(mx)};
+    if(S.measure.on) measureAdd(p);
+    else {
+      // tap an AIS target to select it
+      let best=null,bd=18;
+      for(const t of aisList()){
+        const d=Math.hypot(px(t.lon)-mx, py(t.lat)-my);
+        if(d<bd){bd=d;best=t;}
+      }
+      if(best){
+        AIS.sel = AIS.sel===best.mmsi? null : best.mmsi;
+        if(AIS.sel&&best.c) toast((best.name||best.mmsi)+' — '+deg3(best.c.brg)+' / '+fmtNM(best.c.range)+' NM'+
+          (best.c.tcpa!=null&&best.c.tcpa>=0? ' · CPA '+best.c.cpa.toFixed(2)+' NM in '+fmtDur(best.c.tcpa):''));
+        draw();
+      }
+    }
   }
   drag=null; cv.classList.remove('dragging');
 });
-cv.addEventListener('pointercancel',()=>{drag=null;cv.classList.remove('dragging');});
+cv.addEventListener('pointercancel',()=>{clearTimeout(pressTimer);drag=null;cv.classList.remove('dragging');});
 cv.addEventListener('wheel',e=>{e.preventDefault();
   const r=cv.getBoundingClientRect();
   zoomAt(e.clientX-r.left,e.clientY-r.top, Math.pow(.998,e.deltaY));
 },{passive:false});
 const tdist=e=>Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
 cv.addEventListener('touchstart',e=>{
-  if(e.touches.length===2){ drag=null;
+  if(e.touches.length===2){ clearTimeout(pressTimer); drag=null;
     pinch={d:tdist(e), x:(e.touches[0].clientX+e.touches[1].clientX)/2, y:(e.touches[0].clientY+e.touches[1].clientY)/2};
   }
 },{passive:true});
@@ -1248,7 +1413,32 @@ function legLengths(){
   const L=[]; for(let i=0;i<S.wps.length-1;i++) L.push(legCalc(S.wps[i],S.wps[i+1]).dist);
   return L;
 }
+/* Averages built from the fixes themselves. GPS drops out — alongside, in a
+   dock, below decks — so a gap longer than GAP_MAX is treated as time we know
+   nothing about and left out of the under-way average rather than counted as
+   drifting at zero. */
+const GAP_MAX=0.5;   // hours
+function speedStats(){
+  const t=S.track;
+  if(t.length<2) return null;
+  let dist=0, hrs=0, gap=0, gaps=0, best=0;
+  for(let i=1;i<t.length;i++){
+    const dt=(t[i].t-t[i-1].t)/3600e3;
+    if(dt<=0) continue;
+    const d=rhumb(t[i-1],t[i]).dist;
+    if(dt>GAP_MAX){ gap+=dt; gaps++; continue; }
+    dist+=d; hrs+=dt;
+    const v=d/dt; if(v<=MAX_KN&&v>best) best=v;
+  }
+  const span=(t[t.length-1].t-t[0].t)/3600e3;
+  if(hrs<0.01) return null;
+  return {avg:dist/hrs, dist, hrs, gap, gaps, span,
+          overall: span>0.01? dist/span : null,
+          coverage: span>0? hrs/span*100 : 100, best};
+}
 function smg(){
+  const s=speedStats();
+  if(s&&s.avg>0.05) return s.avg;
   if(!S.startedAt) return null;
   const h=(Date.now()-S.startedAt)/3600e3;
   if(h<0.02||S.runFromStart<0.05) return null;
@@ -1290,9 +1480,9 @@ function computeNav(){
   }
   return o;
 }
-function schedule(n){
+function schedule(n,spd){
   const rows=[]; let cum=0, t=Date.now();
-  const sp=n.speed||S.planSpeed;
+  const sp=spd||S.schedSpeed||n.speed||S.planSpeed;
   for(let i=0;i<S.wps.length;i++){
     const p=S.wps[i];
     let leg=0, brg=null;
@@ -1308,6 +1498,25 @@ function schedule(n){
   return rows;
 }
 
+/* distance along the planned route between two waypoints */
+function routeDistance(a,b){
+  const L=legLengths(); let d=0;
+  const lo=Math.min(a,b), hi=Math.max(a,b);
+  for(let i=lo;i<hi;i++) d+=L[i]||0;
+  return d;
+}
+/* distance from where we are now, up the route, to any waypoint */
+function distToWaypoint(idx){
+  const f=S.fix, w=S.wps;
+  if(!f||idx<0||idx>=w.length) return null;
+  if(idx<S.nextWp) return {passed:true, direct:rhumb(f,w[idx]).dist, brg:rhumb(f,w[idx]).brg};
+  const first=legCalc(f,w[S.nextWp]);
+  let d=first.dist;
+  for(let i=S.nextWp;i<idx;i++) d+=legLengths()[i]||0;
+  const dir=rhumb(f,w[idx]);
+  return {passed:false, route:d, direct:dir.dist, brg:dir.brg};
+}
+
 /* ============================ UI paint ============================ */
 function $(id){return document.getElementById(id);}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1319,9 +1528,17 @@ function paint(){
   $('vSog').className='val'+(f&&f.sog>0.2?' go':'');
   $('vCog').innerHTML = f&&f.cog!=null? deg3(f.cog)+'<small>T</small>' : '—<small>°T</small>';
   $('vPos').textContent = f? fmtLat(f.lat)+'  '+fmtLon(f.lon) : 'no fix';
+  if(f){
+    const se=sunEvents(Date.now(),f.lat,f.lon);
+    $('vSun').innerHTML = se.sunrise
+      ? 'SR '+zoneHM(se.sunrise,S.tz)+' &nbsp; LAN '+zoneHM(se.noon,S.tz)+' &nbsp; SS '+zoneHM(se.sunset,S.tz)
+      : (se.sunrise_state==='always'?'sun does not set today':'sun does not rise today');
+  } else $('vSun').textContent='';
   $('vDtg').innerHTML = n.dtg!=null? fmtNM(n.dtg)+'<small>NM</small>' : '—<small>NM</small>';
   $('vTtg').textContent = n.ttg!=null? fmtDur(n.ttg) : '—';
-  $('vEta').textContent = n.eta? shipTime(n.eta) : '—';
+  $('vEta').textContent = n.eta? destTime(n.eta) : '—';
+  $('vEtaZone').textContent = S.tzDest!=null&&S.tzDest!==S.tz? tzLabel(destTz()) : 'ship\u2019s time';
+  $('vEta').title = n.eta? 'ship\u2019s time '+shipTime(n.eta)+'  ·  UTC '+zoneTime(n.eta,0) : '';
   const sm=smg();
   $('vSmg').innerHTML = sm? sm.toFixed(1)+'<small>kn</small>' : '—<small>kn</small>';
 
@@ -1358,9 +1575,14 @@ function paint(){
   $('vRun').innerHTML = S.runFromStart>0? fmtNM(S.runFromStart)+'<small>NM</small>' : '—<small>NM</small>';
   $('vMax').innerHTML = S.maxSog>0? S.maxSog.toFixed(1)+'<small>kn</small>' : '—<small>kn</small>';
   $('vLegs').textContent = S.wps.length>1? (S.nextWp-1)+' / '+(S.wps.length-1) : '—';
+  const ss=speedStats();
+  $('vAvg').innerHTML = ss? ss.avg.toFixed(1)+'<small>kn</small>' : '—<small>kn</small>';
+  $('vCov').innerHTML = ss? ss.coverage.toFixed(0)+'<small>%</small>' : '—<small>%</small>';
+  $('vCov').title = ss? ss.dist.toFixed(1)+' NM over '+fmtDur(ss.hrs)+' of fixes'+
+    (ss.gaps? ', '+ss.gaps+' gap'+(ss.gaps>1?'s':'')+' totalling '+fmtDur(ss.gap)+' left out':'') : '';
 
-  paintRing(n); paintPeek(n); setGyro(f?f.cog:null); paintLegend();
-  paintRuler(n); paintRequired(n); paintWpList(n); paintSchedule(n); checkAlarms(n); checkMilestone(n);
+  paintRing(n); paintPeek(n); setGyro(f?f.cog:null); paintLegend(); paintAis();
+  paintRuler(n); paintRequired(n); paintWpList(n); paintCalc(n); paintSchedule(n); paintSun(); checkAlarms(n); checkMilestone(n);
   $('voyName').textContent = S.name || (S.wps.length? S.wps.length+' waypoints' : 'no passage loaded');
 }
 
@@ -1412,11 +1634,69 @@ function paintWpList(n){
   }).join('');
   box.innerHTML='<div class="wplist">'+rows+'</div>';
 }
+let calcSig='';
+function paintCalc(n){
+  const from=$('calcFrom'), to=$('calcTo');
+  const sig=S.wps.map((p,i)=>i+(p.name||'')).join('|');
+  if(sig!==calcSig){
+    calcSig=sig;
+    const opts=S.wps.map((p,i)=>'<option value="'+i+'">'+(i+1)+' · '+esc(p.name||'Waypoint '+(i+1))+'</option>').join('');
+    const keepF=from.value, keepT=to.value;
+    from.innerHTML='<option value="here">Present position</option>'+opts;
+    to.innerHTML=opts;
+    from.value = keepF && (keepF==='here'||+keepF<S.wps.length) ? keepF : 'here';
+    to.value = keepT && +keepT<S.wps.length ? keepT :
+      String(Math.max(0,S.wps.length-1));
+  }
+  const out=$('calcOut');
+  if(S.wps.length<1){ out.innerHTML='<div class="empty">Load a route first.</div>'; return; }
+  let spd=parseFloat($('calcSpd').value);
+  if(!isFinite(spd)||spd<=0){ spd=n.speed||S.planSpeed; $('calcSpd').value=spd.toFixed(1); }
+  const ti=+to.value||0;
+  const rows=[];
+  let routeD=null, directD=null, brg=null, note='';
+
+  if(from.value==='here'){
+    const d=distToWaypoint(ti);
+    if(!d){ out.innerHTML='<div class="empty">No position yet — set a fix, or pick two waypoints.</div>'; return; }
+    if(d.passed){ note='Waypoint '+(ti+1)+' is already behind us — showing the direct distance back to it.';
+      directD=d.direct; brg=d.brg; }
+    else { routeD=d.route; directD=d.direct; brg=d.brg; }
+  } else {
+    const fi=+from.value;
+    if(fi===ti){ out.innerHTML='<div class="empty">Pick two different waypoints.</div>'; return; }
+    routeD=routeDistance(fi,ti);
+    const r=rhumb(S.wps[fi],S.wps[ti]);
+    directD=r.dist; brg=r.brg;
+    const g=greatCircle(S.wps[fi],S.wps[ti]);
+    if(Math.abs(g.dist-r.dist)>0.5) note='Great circle would be '+fmtNM(g.dist)+' NM, saving '+fmtNM(r.dist-g.dist)+' NM.';
+  }
+  const useD = routeD!=null? routeD : directD;
+  const hrs = useD/spd;
+  const eta = Date.now()+hrs*3600e3;
+  rows.push(['Along the route', routeD!=null? fmtNM(routeD)+' NM' : '—']);
+  rows.push(['Direct', fmtNM(directD)+' NM'+(brg!=null? ' · '+deg3(brg):'')]);
+  rows.push(['Steaming time', fmtDur(hrs)+' at '+spd.toFixed(1)+' kn']);
+  rows.push(['Arrival', shipTime(eta)+' <span style="color:var(--faint)">ship</span>']);
+  if(S.tzDest!=null&&S.tzDest!==S.tz&&ti===S.wps.length-1)
+    rows.push(['Arrival, destination local', destTime(eta)+' <span style="color:var(--faint)">'+tzLabel(destTz())+'</span>']);
+  if(from.value==='here'&&S.target){
+    const slack=(S.target-eta)/3600e3;
+    rows.push(['Against required arrival', (slack>=0?'in hand ':'short by ')+fmtShort(Math.abs(slack)).replace(/^[+-]/,'')]);
+  }
+  out.innerHTML='<div class="wplist">'+rows.map(r=>
+    '<div class="wp" style="grid-template-columns:1fr auto;cursor:default">'+
+    '<div class="nm" style="font-weight:500;color:var(--dim)">'+r[0]+'</div>'+
+    '<div class="leg" style="font-size:12px;color:var(--ink)">'+r[1]+'</div></div>').join('')+'</div>'+
+    (note?'<p class="hint" style="margin-top:8px">'+note+'</p>':'');
+}
 function paintSchedule(n){
   const box=$('schedBox');
   if(S.wps.length<2){ box.innerHTML='<div class="empty">The schedule appears once there are two or more waypoints.</div>'; return; }
   const rows=schedule(n);
-  box.innerHTML='<div class="scroller"><table class="sched"><thead><tr>'+
+  box.innerHTML=(S.schedSpeed?'<p class="hint" style="margin-bottom:8px">Recalculated at '+
+      S.schedSpeed.toFixed(1)+' kn instead of the live speed.</p>':'')+
+    '<div class="scroller"><table class="sched"><thead><tr>'+
     '<th>WP</th><th>Course</th><th class="r">Leg</th><th class="r">Cumulative</th><th class="r">To go</th><th>ETA</th>'+
     '</tr></thead><tbody>'+rows.map(r=>
       '<tr'+(r.i===S.nextWp?' class="now"':'')+'><td>'+(r.i+1)+(r.p.name?' '+esc(r.p.name.slice(0,14)):'')+'</td>'+
@@ -1426,6 +1706,86 @@ function paintSchedule(n){
       '<td class="r">'+(r.dist!=null?fmtNM(r.dist):(r.past?'passed':'—'))+'</td>'+
       '<td>'+(r.eta?shipTime(r.eta):'—')+'</td></tr>').join('')+
     '</tbody></table></div>';
+}
+
+/* ---------------- sun panel ---------------- */
+function sunSite(){
+  if(S.sunWp==='here'&&S.fix) return {lat:S.fix.lat, lon:S.fix.lon, what:'present position'};
+  const i=+S.sunWp;
+  if(isFinite(i)&&S.wps[i]) return {lat:S.wps[i].lat, lon:S.wps[i].lon,
+    what:'waypoint '+(i+1)+(S.wps[i].name?' · '+S.wps[i].name:'')};
+  if(S.fix) return {lat:S.fix.lat, lon:S.fix.lon, what:'present position'};
+  if(S.wps[0]) return {lat:S.wps[0].lat, lon:S.wps[0].lon, what:'waypoint 1'};
+  return null;
+}
+let sunSig='';
+function paintSun(){
+  const sel=$('sunWhere');
+  const sig=S.wps.map((p,i)=>i+(p.name||'')).join('|')+(S.fix?'F':'');
+  if(sig!==sunSig){
+    sunSig=sig; const keep=sel.value;
+    sel.innerHTML='<option value="here">Present position</option>'+
+      S.wps.map((p,i)=>'<option value="'+i+'">'+(i+1)+' \u00b7 '+esc(p.name||'Waypoint '+(i+1))+'</option>').join('');
+    sel.value = keep||'here'; S.sunWp=sel.value;
+  }
+  const site=sunSite(), out=$('sunOut');
+  if(!site){ out.innerHTML='<div class="empty">Needs a position \u2014 switch on GPS or load a route.</div>';
+    $('ampOut').innerHTML=''; return; }
+  const base=Date.now()+S.sunDay*86400e3;
+  $('sunDate').textContent = S.sunDay===0? 'today' : S.sunDay===1? 'tomorrow' : S.sunDay===-1? 'yesterday'
+    : zoneTime(base,S.tz).split(' ')[0];
+  const e=sunEvents(base, site.lat, site.lon);
+  const now=sunPosition(Date.now(), site.lat, site.lon);
+  const T=(ms)=> ms==null? '--:--' : zoneHM(ms,S.tz)+' <span style="color:var(--faint)">('+zoneHM(ms,0)+'z)</span>';
+  const decStr=d=>Math.abs(d).toFixed(2)+'\u00b0 '+(d>=0?'N':'S');
+  const rows=[];
+  if(e.sunrise){
+    rows.push(['Sunrise', T(e.sunrise)+' &nbsp; brg '+deg3(e.riseAz)+
+      ' <span style="color:var(--faint)">amplitude E'+(e.riseAmp>=0?'N':'S')+Math.abs(e.riseAmp).toFixed(1)+'\u00b0</span>']);
+    rows.push(['Sunset',  T(e.sunset)+' &nbsp; brg '+deg3(e.setAz)+
+      ' <span style="color:var(--faint)">amplitude W'+(e.setAmp>=0?'N':'S')+Math.abs(e.setAmp).toFixed(1)+'\u00b0</span>']);
+    rows.push(['Day length', fmtDur(e.dayLength)]);
+  } else {
+    rows.push(['Sunrise / sunset', e.sunrise_state==='always'? 'the sun does not set here today'
+      : 'the sun does not rise here today']);
+  }
+  rows.push(['Meridian passage (LAN)', T(e.noon)+' &nbsp; alt '+(e.noonAltPrecise||e.noonAlt).toFixed(2)+
+    '\u00b0 &nbsp; brg '+deg3(e.noonAz)]);
+  rows.push(['Civil twilight', T(e.civilDawn)+' &nbsp;\u2013&nbsp; '+T(e.civilDusk)]);
+  rows.push(['Nautical twilight <span style="color:var(--faint)">star sights</span>',
+    T(e.nauticalDawn)+' &nbsp;\u2013&nbsp; '+T(e.nauticalDusk)]);
+  rows.push(['Declination now', decStr(now.dec)+
+    ' <span style="color:var(--faint)">\u00b7 at LAN '+decStr(e.dec)+'</span>']);
+  rows.push(['Sun now', now.alt>0? 'altitude '+now.alt.toFixed(2)+'\u00b0 &nbsp; azimuth '+deg3(now.az)
+    : '<span style="color:var(--faint)">below the horizon ('+now.alt.toFixed(1)+'\u00b0)</span>']);
+  rows.push(['Equation of time', (e.EoT>=0?'+':'\u2212')+Math.abs(e.EoT).toFixed(1)+' min']);
+  rows.push(['Sun\u2019s GHA now', now.gha.toFixed(2)+'\u00b0']);
+  out.innerHTML='<p class="hint" style="margin-bottom:8px">'+esc(site.what)+' \u2014 '+
+      fmtLat(site.lat)+' &nbsp;'+fmtLon(site.lon)+'. Times are ship\u2019s clock ('+tzLabel(S.tz)+').</p>'+
+    '<div class="wplist">'+rows.map(r=>
+      '<div class="wp" style="grid-template-columns:1fr auto;cursor:default">'+
+      '<div class="nm" style="font-weight:500;color:var(--dim)">'+r[0]+'</div>'+
+      '<div class="leg" style="font-size:11px;color:var(--ink);text-align:right">'+r[1]+'</div></div>').join('')+'</div>'+
+    '<p class="hint" style="margin-top:8px">Meridian altitude is the sextant altitude to expect at LAN before any '+
+      'corrections. Good to a fraction of a degree \u2014 use the almanac for the sight itself.</p>';
+  paintAmp(e);
+}
+function paintAmp(e){
+  const box=$('ampOut'), obs=parseFloat($('ampObs').value);
+  if(!e||!e.sunrise||!isFinite(obs)){ box.innerHTML=''; return; }
+  const which=$('ampWhen').value;
+  const trueBrg = which==='rise'? e.riseAz : e.setAz;
+  let err=wrap180(trueBrg-obs);
+  const side = err>0? 'East' : 'West';
+  box.innerHTML='<div class="wplist" style="margin-top:4px">'+
+    '<div class="wp" style="grid-template-columns:1fr auto;cursor:default"><div class="nm" style="font-weight:500;color:var(--dim)">True bearing</div>'+
+    '<div class="leg" style="font-size:12px;color:var(--ink)">'+deg3(trueBrg)+'</div></div>'+
+    '<div class="wp" style="grid-template-columns:1fr auto;cursor:default"><div class="nm" style="font-weight:500;color:var(--dim)">Compass bearing</div>'+
+    '<div class="leg" style="font-size:12px;color:var(--ink)">'+deg3(obs)+'</div></div>'+
+    '<div class="wp next" style="grid-template-columns:1fr auto;cursor:default"><div class="nm">Compass error</div>'+
+    '<div class="leg" style="font-size:13px;color:var(--route)">'+Math.abs(err).toFixed(1)+'\u00b0 '+side+'</div></div></div>'+
+    '<p class="hint" style="margin-top:7px">Error is true minus compass \u2014 '+Math.abs(err).toFixed(1)+'\u00b0 '+side+
+    '. Subtract variation to get deviation for this heading.</p>';
 }
 
 /* ============================ alarms ============================ */
@@ -1453,8 +1813,9 @@ function syncBanner(){
   document.body.classList.toggle('banner',on);
 }
 function checkAlarms(n){
-  let a=null;
-  if(S.alXte && n.xte!=null && n.xte>S.xtl)
+  let a=checkAisAlarm();
+  if(a){}
+  else if(S.alXte && n.xte!=null && n.xte>S.xtl)
     a={id:'xte', level:'alert', txt:'Cross-track limit exceeded',
        sub:n.xte.toFixed(2)+' NM to '+(n.side==='PORT'?'port':'starboard')+' of the planned track (limit '+S.xtl.toFixed(2)+' NM)'};
   else if(S.alWp && n.wpDist!=null && n.wpDist<=Math.max(S.arrRad*3,0.9) && S.nextWp<S.wps.length)
@@ -1606,20 +1967,39 @@ function stopSim(){
 /* ---------------- measure ---------------- */
 function setMeasure(on){
   S.measure.on=on;
-  if(!on){ S.measure.a=S.measure.b=null; S.measure.fixed=false; }
+  if(!on){ S.measure.pts=[]; S.measure.live=null; }
   $('btnMeasure').classList.toggle('on',on);
   cv.classList.toggle('measuring',on);
-  $('measureOut').classList.toggle('show', on&&!!S.measure.a);
+  if(on) toast('Tap to drop points — each leg is measured, and the total with it');
   showMeasure(); draw();
+}
+function measureAdd(p){
+  S.measure.pts.push(p); S.measure.live=null; showMeasure(); draw();
+}
+function measureUndo(){
+  if(!S.measure.pts.length) return;
+  S.measure.pts.pop(); showMeasure(); draw();
 }
 function showMeasure(){
   const m=S.measure, el=$('measureOut');
-  if(!m.on||!m.a||!m.b){ el.classList.remove('show'); return; }
-  const r=rhumb(m.a,m.b), g=greatCircle(m.a,m.b);
+  if(!m.on||!m.pts.length){ el.classList.remove('show'); return; }
+  const pts=m.pts.concat(m.live?[m.live]:[]);
+  let total=0;
+  for(let i=1;i<pts.length;i++) total+=rhumb(pts[i-1],pts[i]).dist;
   el.classList.add('show');
-  el.innerHTML=deg3(r.brg)+' &nbsp;/&nbsp; '+fmtNM(r.dist)+' NM'+
-    (Math.abs(g.dist-r.dist)>0.5? ' <span style="color:var(--dim)">· GC '+fmtNM(g.dist)+' NM</span>':'')+
-    (S.planSpeed>0? ' <span style="color:var(--dim)">· '+fmtDur(r.dist/S.planSpeed)+' at '+S.planSpeed+' kn</span>':'');
+  if(pts.length<2){
+    el.innerHTML='<span style="color:var(--dim)">first point set — tap the next one</span>'+
+      '&nbsp; <b id="mUndo" style="cursor:pointer;color:var(--own)">clear</b>';
+  } else {
+    const last=rhumb(pts[pts.length-2],pts[pts.length-1]);
+    el.innerHTML='<b>'+fmtNM(total)+' NM</b> total'+
+      (pts.length>2? ' <span style="color:var(--dim)">over '+(pts.length-1)+' legs</span>':'')+
+      ' &nbsp;·&nbsp; last leg '+deg3(last.brg)+' / '+fmtNM(last.dist)+' NM'+
+      (S.planSpeed>0? ' <span style="color:var(--dim)">·&nbsp;'+fmtDur(total/S.planSpeed)+' at '+S.planSpeed+' kn</span>':'')+
+      ' &nbsp; <b id="mUndo" style="cursor:pointer;color:var(--own)">undo</b>';
+  }
+  const u=$('mUndo');
+  if(u) u.onclick=e=>{ e.stopPropagation(); if(S.measure.pts.length>1) measureUndo(); else setMeasure(false); };
 }
 
 /* ---------------- log & track ---------------- */
@@ -1671,7 +2051,9 @@ function passageJson(){
   return JSON.stringify({app:'Rhumb',version:2,name:S.name,savedAt:new Date().toISOString(),
     settings:{planSpeed:S.planSpeed,tz:S.tz,arrRad:S.arrRad,xtl:S.xtl,legMode:S.legMode,
       speedMode:S.speedMode,theme:S.theme,alXte:S.alXte,alWp:S.alWp,sound:S.sound,
-      hud:S.hud,dwell:S.dwell,fade:S.fade,spdTrack:S.spdTrack},
+      hud:S.hud,dwell:S.dwell,fade:S.fade,spdTrack:S.spdTrack,keepAwake:S.keepAwake,
+      aisShow:S.aisShow,aisAlarm:S.aisAlarm,cpaLimit:S.cpaLimit,tcpaLimit:S.tcpaLimit,
+      aisTimeout:S.aisTimeout,aisUrl:S.aisUrl,tzDest:S.tzDest},
     nextWp:S.nextWp, waypoints:S.wps},null,1);
 }
 function passageGpx(){
@@ -1702,6 +2084,14 @@ function loadJson(o){
   if(s.alWp!=null) setSw('swWp','alWp',s.alWp);
   if(s.sound!=null) setSw('swSound','sound',s.sound);
   if(s.spdTrack!=null) setSw('swSpd','spdTrack',s.spdTrack);
+  if(s.aisShow!=null){ setSw('swAisShow','aisShow',s.aisShow); $('btnAis').classList.toggle('on',S.aisShow); }
+  if(s.aisAlarm!=null) setSw('swAisAlarm','aisAlarm',s.aisAlarm);
+  if(s.cpaLimit){S.cpaLimit=+s.cpaLimit; $('inCpa').value=S.cpaLimit;}
+  if(s.tcpaLimit){S.tcpaLimit=+s.tcpaLimit; $('inTcpa').value=S.tcpaLimit;}
+  if(s.aisTimeout){S.aisTimeout=+s.aisTimeout; $('inAisTo').value=S.aisTimeout;}
+  if(s.aisUrl){S.aisUrl=s.aisUrl; $('inAisUrl').value=s.aisUrl;}
+  if(s.keepAwake!=null) setKeepAwake(!!s.keepAwake,false);
+  if(s.tzDest!==undefined){S.tzDest=s.tzDest; $('inTzDest').value=s.tzDest==null?'':s.tzDest;}
   if(s.hud){S.hud=s.hud; $('selHud').value=S.hud;}
   if(s.dwell){S.dwell=+s.dwell; $('inDwell').value=S.dwell; $('dwellLbl').textContent=S.dwell+' s';}
   if(s.fade){S.fade=+s.fade; $('inFade').value=S.fade; $('fadeLbl').textContent=S.fade+' ms'; applyFade();}
@@ -1831,20 +2221,38 @@ $('btnMeasure').onclick=()=>setMeasure(!S.measure.on);
 $('btnSim').onclick=()=>S.sim?stopSim():startSim();
 $('alAck').onclick=()=>{ if(curAlarm){ S.acked[curAlarm.id]=true; $('alarm').className=''; curAlarm=null; syncBanner(); } };
 
-$('btnWake').onclick=async()=>{
-  if(S.wake){ try{await S.wake.release();}catch(e){} S.wake=null; $('btnWake').classList.remove('on'); toast('Screen may sleep again'); return; }
-  if(!('wakeLock' in navigator)){ toast('This browser cannot hold the screen awake'); return; }
+async function acquireWake(announce){
+  if(!('wakeLock' in navigator)){ if(announce) toast('This browser cannot hold the screen awake'); return false; }
+  if(S.wake) return true;
   try{
     S.wake=await navigator.wakeLock.request('screen');
-    S.wake.addEventListener('release',()=>{S.wake=null;$('btnWake').classList.remove('on');});
-    $('btnWake').classList.add('on'); toast('Screen will stay awake');
-  }catch(e){ toast('Could not keep the screen awake'); }
-};
-document.addEventListener('visibilitychange',async()=>{
-  if(document.visibilityState==='visible' && $('btnWake').classList.contains('on') && !S.wake){
-    try{ S.wake=await navigator.wakeLock.request('screen'); }catch(e){}
-  }
+    S.wake.addEventListener('release',()=>{ S.wake=null; if(!S.keepAwake) $('btnWake').classList.remove('on'); });
+    $('btnWake').classList.add('on');
+    if(announce) toast('Screen will stay awake');
+    return true;
+  }catch(e){ if(announce) toast('Could not keep the screen awake — tap the chart once, then try again'); return false; }
+}
+async function releaseWake(){
+  try{ if(S.wake) await S.wake.release(); }catch(e){}
+  S.wake=null; $('btnWake').classList.remove('on');
+}
+function setKeepAwake(on,announce){
+  S.keepAwake=on;
+  setSw('swWake','keepAwake',on);
+  $('btnWake').classList.toggle('on',on);
+  if(on) acquireWake(announce); else { releaseWake(); if(announce) toast('Screen may sleep again'); }
+}
+$('btnWake').onclick=()=>setKeepAwake(!S.keepAwake,true);
+$('swWake').onclick=()=>{ setKeepAwake(!S.keepAwake,true); persist(); };
+// the lock is dropped whenever the tab is hidden, so take it again on return
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && S.keepAwake && !S.wake) acquireWake(false);
 });
+// some browsers only grant it after a gesture — take the first one we get
+['pointerdown','keydown'].forEach(ev=>window.addEventListener(ev,function once(){
+  if(S.keepAwake&&!S.wake) acquireWake(false);
+  window.removeEventListener(ev,once);
+},{once:true}));
 
 $('btnParse').onclick=()=>showPreview(parseBulk($('taImport').value),'Pasted list');
 $('btnSample').onclick=()=>{ $('taImport').value=SAMPLE; showPreview(parseBulk(SAMPLE),'Sample passage'); };
@@ -1937,6 +2345,78 @@ $('btnShare').onclick=()=>doShare('share');
 $('btnShareTxt').onclick=()=>doShare('text');
 $('btnShareFile').onclick=()=>doShare('file');
 $('btnShareLink').onclick=()=>doShare('link');
+$('inTzDest').oninput=e=>{
+  const v=e.target.value.trim();
+  S.tzDest = v===''? null : (+v||0);
+  paint(); persist();
+};
+$('btnTzDest').onclick=()=>{
+  const w=S.wps[S.wps.length-1];
+  if(!w){ toast('No route loaded'); return; }
+  S.tzDest=Math.round(w.lon/15); $('inTzDest').value=S.tzDest;
+  paint(); persist(); toast('Destination clock set to '+tzLabel(S.tzDest));
+};
+$('sunWhere').onchange=e=>{S.sunWp=e.target.value; paintSun();};
+$('sunPrev').onclick=()=>{S.sunDay--; paintSun();};
+$('sunNext').onclick=()=>{S.sunDay++; paintSun();};
+$('sunDate').onclick=()=>{S.sunDay=0; paintSun();};
+$('ampObs').oninput=()=>paintSun();
+$('ampWhen').onchange=()=>paintSun();
+['calcFrom','calcTo'].forEach(id=>$(id).onchange=()=>paint());
+$('calcSpd').oninput=()=>paint();
+document.querySelectorAll('[data-spd]').forEach(b=>b.onclick=()=>{
+  const n=computeNav(), ss=speedStats();
+  let v = b.dataset.spd==='sog' ? (S.fix&&S.fix.sog!=null?S.fix.sog:null)
+        : b.dataset.spd==='plan' ? S.planSpeed
+        : (ss?ss.avg:smg());
+  if(v==null||!(v>0.05)){ toast('That speed is not available yet'); return; }
+  $('calcSpd').value=v.toFixed(1); paint();
+});
+$('schedSpd').oninput=e=>{
+  const v=parseFloat(e.target.value);
+  S.schedSpeed = isFinite(v)&&v>0 ? v : null;
+  paint();
+};
+$('schedReset').onclick=()=>{ S.schedSpeed=null; $('schedSpd').value=''; paint(); };
+$('btnAis').onclick=()=>{ setSw('swAisShow','aisShow',!S.aisShow); $('btnAis').classList.toggle('on',S.aisShow); draw(); persist(); };
+$('swAisShow').onclick=()=>{ setSw('swAisShow','aisShow',!S.aisShow); $('btnAis').classList.toggle('on',S.aisShow); draw(); persist(); };
+$('swAisAlarm').onclick=()=>{ setSw('swAisAlarm','aisAlarm',!S.aisAlarm); S.acked={}; paint(); persist(); };
+$('inCpa').oninput=e=>{S.cpaLimit=Math.max(.05,+e.target.value||1); paintAis(); draw(); persist();};
+$('inTcpa').oninput=e=>{S.tcpaLimit=Math.max(1,+e.target.value||20); paintAis(); draw(); persist();};
+$('inAisTo').oninput=e=>{S.aisTimeout=Math.max(2,+e.target.value||12); paintAis(); persist();};
+$('inAisUrl').oninput=e=>{S.aisUrl=e.target.value.trim(); persist();};
+$('selAisSrc').onchange=e=>{
+  const v=e.target.value;
+  $('aisWs').style.display = v==='ws'?'':'none';
+  $('aisSerial').style.display = v==='serial'?'':'none';
+  $('aisReplay').style.display = v==='replay'?'':'none';
+};
+$('btnAisConnect').onclick=()=>{
+  const v=$('selAisSrc').value;
+  if(v==='ws'){
+    let u=$('inAisUrl').value.trim();
+    if(!u){ toast('Enter the bridge address'); return; }
+    if(!/^wss?:\/\//.test(u)) u='ws://'+u.replace(/^https?:\/\//,'');
+    if(!/\/[a-z]*$/i.test(new URL(u.replace('ws','http')).pathname)) u=u.replace(/\/$/,'')+'/nmea';
+    S.aisUrl=u; $('inAisUrl').value=u; persist();
+    aisConnectWs(u);
+  } else if(v==='serial') aisConnectSerial();
+  else $('fileAis').click();
+};
+$('btnAisStop').onclick=()=>{ aisDisconnect(); toast('AIS feed stopped'); };
+$('btnAisFile').onclick=()=>$('fileAis').click();
+$('fileAis').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(t=>{ aisReplay(t,12); toast('Replaying '+f.name); });
+  e.target.value='';
+};
+$('aisBox').onclick=e=>{
+  const row=e.target.closest('[data-mmsi]'); if(!row) return;
+  const mmsi=+row.dataset.mmsi, t=AIS.targets.get(mmsi);
+  if(!t||t.lat==null) return;
+  AIS.sel=mmsi; V.clon=t.lon; V.clat=t.lat; if(V.s<3000) V.s=8000;
+  setFollow(false); openDrawer(false); draw();
+};
 $('btnMFix').onclick=()=>{
   const p=parseLine($('inMLat').value+' '+$('inMLon').value);
   if(!p){toast('Could not read that position');return;}
@@ -1957,7 +2437,11 @@ window.addEventListener('keydown',e=>{
   if(k==='t') $('btnTheme').click();
   if(k==='d'){ if($('dash').classList.contains('hidden')) showDash(); else hideDashNow(); }
   if(k==='r'){ openDrawer(true); document.querySelector('.tab[data-p="pRep"]').click(); }
-  if(e.key==='Escape'){ if(S.measure.on) setMeasure(false); else openDrawer(false); }
+  if(k==='s'){ openDrawer(true); document.querySelector('.tab[data-p="pSun"]').click(); }
+  if(k==='k'){ openDrawer(true); document.querySelector('.tab[data-p="pRoute"]').click();
+    setTimeout(()=>{const e=$('calcOut'); if(e.scrollIntoView) e.scrollIntoView({block:'center'});},80); }
+  if(k==='u'&&S.measure.on) measureUndo();
+  if(e.key==='Escape'){ if(S.measure.on) setMeasure(false); else if(S.rb){S.rb=null;draw();} else openDrawer(false); }
 });
 
 const SAMPLE=`1.  Sikka Pilot Station      22 25.0 N   069 05.0 E
@@ -2134,7 +2618,7 @@ function paintPeek(n){
   const f=S.fix;
   $('pkSog').innerHTML = f&&f.sog!=null? f.sog.toFixed(1)+'<small>kn</small>' : '—<small>kn</small>';
   $('pkDtg').innerHTML = n.dtg!=null? fmtNM(n.dtg)+'<small>NM</small>' : '—<small>NM</small>';
-  $('pkEta').textContent = n.eta? shipTime(n.eta) : '—';
+  $('pkEta').textContent = n.eta? destTime(n.eta) : '—';
   $('pkPct').innerHTML = n.pct!=null? n.pct.toFixed(1)+'<small>%</small>' : '—<small>%</small>';
   $('peekBar').firstElementChild.style.width=(n.pct||0)+'%';
 }
@@ -2163,7 +2647,10 @@ function shareText(){
   if(n.dtg!=null){
     L.push('Run '+fmtNM(n.run)+' NM of '+fmtNM(n.total)+' NM'+(n.pct!=null?'  ('+n.pct.toFixed(1)+'% complete)':''));
     L.push('To go '+fmtNM(n.dtg)+' NM');
-    if(n.eta) L.push('ETA '+shipTime(n.eta)+' ship time');
+    if(n.eta){
+      L.push('ETA '+shipTime(n.eta)+' ship time ('+tzLabel(S.tz)+')');
+      if(S.tzDest!=null&&S.tzDest!==S.tz) L.push('   = '+destTime(n.eta)+' local at destination ('+tzLabel(destTz())+')');
+    }
     const w=S.wps[S.nextWp];
     if(w&&n.wpDist!=null) L.push('Next waypoint '+(S.nextWp+1)+(w.name?' '+w.name:'')+' in '+fmtNM(n.wpDist)+' NM');
   }
@@ -2249,6 +2736,389 @@ async function doShare(mode){
     try{ await navigator.share({title:S.name||'Position report', text:shareText()}); return; }catch(e){ if(e.name==='AbortError') return; }
   }
   download(fname,json); toast('Saved — attach it in WhatsApp');
+}
+
+/* ============================ the sun ============================ */
+/* NOAA solar position equations. Good to well under a minute of time and a
+   tenth of a degree — ample for amplitude compass checks and LAN planning,
+   but the Nautical Almanac remains the authority for a sight reduction. */
+function solarBase(ms){
+  const JD = ms/86400000 + 2440587.5;
+  const T  = (JD - 2451545.0)/36525;
+  const L0 = ((280.46646 + T*(36000.76983 + 0.0003032*T))%360+360)%360;
+  const M  = 357.52911 + T*(35999.05029 - 0.0001537*T);
+  const e  = 0.016708634 - T*(0.000042037 + 0.0000001267*T);
+  const Mr = M*D2R;
+  const C  = Math.sin(Mr)*(1.914602 - T*(0.004817 + 0.000014*T))
+           + Math.sin(2*Mr)*(0.019993 - 0.000101*T)
+           + Math.sin(3*Mr)*0.000289;
+  const trueLong = L0 + C;
+  const omega = 125.04 - 1934.136*T;
+  const lambda = trueLong - 0.00569 - 0.00478*Math.sin(omega*D2R);
+  const eps0 = 23 + (26 + (21.448 - T*(46.815 + T*(0.00059 - T*0.001813)))/60)/60;
+  const eps = eps0 + 0.00256*Math.cos(omega*D2R);
+  const dec = Math.asin(Math.sin(eps*D2R)*Math.sin(lambda*D2R))*R2D;
+  const y = Math.tan(eps*D2R/2)**2;
+  const EoT = 4*R2D*( y*Math.sin(2*L0*D2R) - 2*e*Math.sin(Mr)
+            + 4*e*y*Math.sin(Mr)*Math.cos(2*L0*D2R)
+            - 0.5*y*y*Math.sin(4*L0*D2R) - 1.25*e*e*Math.sin(2*Mr) );
+  return {dec, EoT, T, lambda};
+}
+/* altitude and azimuth right now */
+function sunPosition(ms, lat, lon){
+  const b = solarBase(ms);
+  const d = new Date(ms);
+  const utcMin = d.getUTCHours()*60 + d.getUTCMinutes() + d.getUTCSeconds()/60;
+  const trueSolarMin = utcMin + b.EoT + 4*lon;
+  let ha = trueSolarMin/4 - 180;                 // degrees, negative before noon
+  ha = ((ha+180)%360+360)%360 - 180;
+  const la=lat*D2R, de=b.dec*D2R, H=ha*D2R;
+  const sinAlt = Math.sin(la)*Math.sin(de) + Math.cos(la)*Math.cos(de)*Math.cos(H);
+  const alt = Math.asin(clamp(sinAlt,-1,1))*R2D;
+  let az = Math.atan2(-Math.sin(H)*Math.cos(de),
+            Math.cos(la)*Math.sin(de) - Math.sin(la)*Math.cos(de)*Math.cos(H))*R2D;
+  az = (az+360)%360;
+  const ghaSun = ((utcMin + b.EoT)/4 + 180)%360;
+  return {alt, az, dec:b.dec, ha, EoT:b.EoT, gha:(ghaSun+360)%360};
+}
+/* rising, setting, twilight and meridian passage for a whole day */
+function sunEvents(ms, lat, lon){
+  const d = new Date(ms);
+  const dayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const b = solarBase(dayStart + 12*3600e3 - lon/15*3600e3);   // near local noon
+  const noonUtcMin = 720 - 4*lon - b.EoT;
+  const la=lat*D2R, de=b.dec*D2R;
+  const ha0 = h0 => {
+    const c = (Math.sin(h0*D2R) - Math.sin(la)*Math.sin(de)) / (Math.cos(la)*Math.cos(de));
+    if(c> 1) return null;      // never rises above that altitude
+    if(c<-1) return NaN;       // never falls below it
+    return Math.acos(c)*R2D;
+  };
+  const mk = m => m==null? null : dayStart + m*60000;
+  const out = {noon: mk(noonUtcMin), dec:b.dec, EoT:b.EoT};
+  const pack = (h0,a,b2) => {
+    const H = ha0(h0);
+    if(H===null){ out[a]=null; out[b2]=null; out[a+'_state']='never'; return; }
+    if(Number.isNaN(H)){ out[a]=null; out[b2]=null; out[a+'_state']='always'; return; }
+    out[a]=mk(noonUtcMin - 4*H); out[b2]=mk(noonUtcMin + 4*H);
+  };
+  pack(-0.833,'sunrise','sunset');
+  pack(-6,'civilDawn','civilDusk');
+  pack(-12,'nauticalDawn','nauticalDusk');
+  if(out.sunrise&&out.sunset){
+    out.dayLength=(out.sunset-out.sunrise)/3600e3;
+    out.riseAz=sunPosition(out.sunrise,lat,lon).az;
+    out.setAz =sunPosition(out.sunset ,lat,lon).az;
+    // amplitude: how far north or south of due east/west the sun breaks the horizon
+    out.riseAmp=90-out.riseAz;
+    out.setAmp =out.setAz-270;
+  }
+  out.noonAlt = 90 - Math.abs(lat - b.dec);
+  out.noonAz  = lat > b.dec ? 180 : 0;
+  if(out.noon){ const p=sunPosition(out.noon,lat,lon); out.noonAltPrecise=p.alt; out.noonAz=p.alt>89.99?out.noonAz:p.az; }
+  return out;
+}
+
+/* ============================ AIS ============================ */
+/* Browsers cannot open a raw TCP or UDP socket, so an AIS transponder is reached
+   through a WebSocket (see nmea-bridge.py), a USB serial port, or a replayed log. */
+const AIS={targets:new Map(), ws:null, port:null, reader:null, src:'', status:'off',
+           lines:0, lastLine:0, replay:null, sel:null};
+function nmeaChecksumOk(s){
+  const i=s.indexOf('*'); if(i<0) return false;
+  let c=0; for(let k=1;k<i;k++) c^=s.charCodeAt(k);
+  return c===parseInt(s.slice(i+1,i+3),16);
+}
+function sixbit(payload){
+  const bits=[];
+  for(const ch of payload){
+    let v=ch.charCodeAt(0)-48; if(v>40) v-=8;
+    if(v<0||v>63) return null;
+    for(let b=5;b>=0;b--) bits.push((v>>b)&1);
+  }
+  return bits;
+}
+const bU=(b,s,l)=>{let v=0;for(let i=0;i<l;i++)v=v*2+(b[s+i]||0);return v;};
+const bI=(b,s,l)=>{const v=bU(b,s,l); return v&(1<<(l-1))? v-(1<<l) : v;};
+function bS(b,s,l){let o='';for(let i=0;i<l;i+=6){const c=bU(b,s+i,6);
+  o+= c<32? String.fromCharCode(c+64):String.fromCharCode(c);} return o.replace(/@+$/,'').trim();}
+function decodeAis(b){
+  const type=bU(b,0,6), o={type, mmsi:bU(b,8,30)};
+  const LON=0x6791AC0, LAT=0x3412140;
+  if(type===1||type===2||type===3){
+    o.status=bU(b,38,4);
+    const sog=bU(b,50,10); o.sog=sog===1023?null:sog/10;
+    const lon=bI(b,61,28), lat=bI(b,89,27);
+    o.lon=lon===LON?null:lon/600000; o.lat=lat===LAT?null:lat/600000;
+    const cog=bU(b,116,12); o.cog=cog===3600?null:cog/10;
+    const h=bU(b,128,9); o.hdg=h===511?null:h;
+    return o;
+  }
+  if(type===18||type===19){
+    const sog=bU(b,46,10); o.sog=sog===1023?null:sog/10;
+    const lon=bI(b,57,28), lat=bI(b,85,27);
+    o.lon=lon===LON?null:lon/600000; o.lat=lat===LAT?null:lat/600000;
+    const cog=bU(b,112,12); o.cog=cog===3600?null:cog/10;
+    const h=bU(b,124,9); o.hdg=h===511?null:h;
+    o.classB=true;
+    if(type===19){ o.name=bS(b,143,120); o.shiptype=bU(b,263,8); }
+    return o;
+  }
+  if(type===5){
+    o.imo=bU(b,40,30); o.callsign=bS(b,70,42); o.name=bS(b,112,120);
+    o.shiptype=bU(b,232,8);
+    o.length=bU(b,240,9)+bU(b,249,9); o.beam=bU(b,258,6)+bU(b,264,6);
+    o.draught=bU(b,294,8)/10; o.dest=bS(b,302,120);
+    return o;
+  }
+  if(type===24){
+    o.part=bU(b,38,2);
+    if(o.part===0) o.name=bS(b,40,120);
+    else { o.shiptype=bU(b,40,8); o.callsign=bS(b,90,42);
+           o.length=bU(b,132,9)+bU(b,141,9); o.beam=bU(b,150,6)+bU(b,156,6); }
+    return o;
+  }
+  if(type===21){
+    o.aid=true; o.name=bS(b,43,120);
+    const lon=bI(b,164,28), lat=bI(b,192,27);
+    o.lon=lon===LON?null:lon/600000; o.lat=lat===LAT?null:lat/600000;
+    return o;
+  }
+  return o;
+}
+const aisFrag={};
+function feedNmea(line){
+  line=(line||'').trim(); if(!line) return;
+  AIS.lines++; AIS.lastLine=Date.now();
+  if(/^\$..(RMC|GGA|VTG)/.test(line)){ feedGps(line); return; }
+  if(!/^[!$](AI|AB|AD|AN|AR|AS|AT|AX|BS|SA)(VDM|VDO)/.test(line)) return;
+  if(!nmeaChecksumOk(line)) return;
+  const p=line.split(','), total=+p[1], num=+p[2], seq=p[3]||'0', chan=p[4]||'A';
+  let payload=p[5];
+  if(total>1){
+    const key=seq+chan;
+    aisFrag[key]=aisFrag[key]||{};
+    aisFrag[key][num]=payload;
+    for(let i=1;i<=total;i++) if(!aisFrag[key][i]) return;
+    payload=''; for(let i=1;i<=total;i++) payload+=aisFrag[key][i];
+    delete aisFrag[key];
+  }
+  const bits=sixbit(payload); if(!bits) return;
+  let o; try{ o=decodeAis(bits); }catch(e){ return; }
+  if(!o||!o.mmsi) return;
+  if(/VDO/.test(line)){                       // our own transponder reporting us
+    if(o.lat!=null&&o.lon!=null&&!S.sim){ AIS.own=o.mmsi; setFix(o.lat,o.lon,o.sog,o.cog,null); markNmeaFix(); }
+    return;
+  }
+  if(AIS.own && o.mmsi===AIS.own) return;
+  const t=AIS.targets.get(o.mmsi)||{mmsi:o.mmsi};
+  for(const k of ['lat','lon','sog','cog','hdg','name','callsign','shiptype','dest','draught',
+                  'length','beam','imo','status','classB','aid'])
+    if(o[k]!=null&&o[k]!=='') t[k]=o[k];
+  t.seen=Date.now();
+  AIS.targets.set(o.mmsi,t);
+}
+function nmeaDeg(v,h){
+  if(!v) return null;
+  const f=parseFloat(v); if(!isFinite(f)) return null;
+  const d=Math.floor(f/100), m=f-d*100;
+  let x=d+m/60;
+  if(h==='S'||h==='W') x=-x;
+  return x;
+}
+function feedGps(line){
+  if(!nmeaChecksumOk(line)) return;
+  const p=line.split(','), t=p[0].slice(3,6);
+  let lat=null,lon=null,sog=null,cog=null;
+  if(t==='RMC'){
+    if(p[2]!=='A') return;
+    lat=nmeaDeg(p[3],p[4]); lon=nmeaDeg(p[5],p[6]);
+    sog=parseFloat(p[7]); cog=parseFloat(p[8]);
+  } else if(t==='GGA'){
+    if(p[6]==='0'||!p[6]) return;
+    lat=nmeaDeg(p[2],p[3]); lon=nmeaDeg(p[4],p[5]);
+  } else if(t==='VTG'){
+    cog=parseFloat(p[1]); sog=parseFloat(p[7]);
+    if(S.fix&&isFinite(sog)) setFix(S.fix.lat,S.fix.lon,sog,isFinite(cog)?cog:null,null);
+    return;
+  }
+  if(lat==null||lon==null||!isFinite(lat)||!isFinite(lon)) return;
+  if(S.sim) return;
+  setFix(lat,lon,isFinite(sog)?sog:null,isFinite(cog)?cog:null,null);
+  markNmeaFix();
+}
+function markNmeaFix(){
+  $('gpsDot').className='dot live';
+  $('gpsLbl').textContent='NMEA fix';
+  $('btnGps').classList.add('on');
+}
+/* closest point of approach against own ship */
+function cpaOf(t){
+  const f=S.fix;
+  if(!f||t.lat==null||f.sog==null||t.sog==null||t.cog==null||f.cog==null) return null;
+  const r=toLocal(f,t);                      // NM east / north
+  const rad=d=>d*D2R;
+  const vx=t.sog*Math.sin(rad(t.cog))-f.sog*Math.sin(rad(f.cog));
+  const vy=t.sog*Math.cos(rad(t.cog))-f.sog*Math.cos(rad(f.cog));
+  const v2=vx*vx+vy*vy, range=Math.hypot(r.x,r.y);
+  const brg=(Math.atan2(r.x,r.y)*R2D+360)%360;
+  if(v2<1e-9) return {range,brg,cpa:range,tcpa:null};
+  const tcpa=-(r.x*vx+r.y*vy)/v2;            // hours
+  if(tcpa<0) return {range,brg,cpa:range,tcpa};
+  const cpa=Math.hypot(r.x+vx*tcpa, r.y+vy*tcpa);
+  return {range,brg,cpa,tcpa};
+}
+function aisList(){
+  const now=Date.now(), out=[];
+  for(const [mmsi,t] of AIS.targets){
+    if(now-t.seen > S.aisTimeout*60000){ AIS.targets.delete(mmsi); continue; }
+    if(t.lat==null||t.lon==null) continue;
+    const c=cpaOf(t);
+    out.push(Object.assign({},t,{c, lost:(now-t.seen)>180000,
+      danger: !!(c && c.tcpa!=null && c.tcpa>=0 && c.tcpa*60<=S.tcpaLimit && c.cpa<=S.cpaLimit)}));
+  }
+  out.sort((a,b)=>{
+    if(a.danger!==b.danger) return a.danger?-1:1;
+    const ra=a.c?a.c.range:1e9, rb=b.c?b.c.range:1e9;
+    return ra-rb;
+  });
+  return out;
+}
+function drawAis(){
+  if(!S.aisShow||!AIS.targets.size) return;
+  const list=aisList();
+  ctx.font='600 9px '+COL['--sans'];
+  const showNames=V.s>1500;
+  for(const t of list){
+    const x=px(t.lon), y=py(t.lat);
+    if(x<-40||x>W+40||y<-40||y>H+40) continue;
+    const col = t.danger? COL['--alert'] : t.lost? COL['--faint'] : t.aid? COL['--amber'] : COL['--ink'];
+    ctx.globalAlpha = t.lost? .45 : 1;
+    if(t.aid){
+      ctx.beginPath(); ctx.moveTo(x,y-6); ctx.lineTo(x+6,y); ctx.lineTo(x,y+6); ctx.lineTo(x-6,y); ctx.closePath();
+      ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.stroke();
+    } else {
+      const dir=(t.hdg!=null?t.hdg:(t.cog||0));
+      ctx.save(); ctx.translate(x,y); ctx.rotate(dir*D2R);
+      ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(5,6); ctx.lineTo(0,3.5); ctx.lineTo(-5,6); ctx.closePath();
+      if(t.classB){ ctx.strokeStyle=col; ctx.lineWidth=1.4; ctx.stroke(); }
+      else { ctx.fillStyle=col; ctx.fill(); }
+      ctx.restore();
+      if(t.sog>0.3&&t.cog!=null){
+        const d=t.sog/10, c=Math.cos(t.lat*D2R)||1e-6, br=t.cog*D2R;
+        const p2={lat:t.lat+d*Math.cos(br)/60, lon:t.lon+d*Math.sin(br)/(60*c)};
+        ctx.strokeStyle=col; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(px(p2.lon),py(p2.lat)); ctx.stroke();
+      }
+    }
+    if(t.danger){
+      ctx.beginPath(); ctx.arc(x,y,13,0,7); ctx.strokeStyle=COL['--alert']; ctx.lineWidth=1.5;
+      ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if(AIS.sel===t.mmsi){
+      ctx.beginPath(); ctx.arc(x,y,16,0,7); ctx.strokeStyle=COL['--own']; ctx.lineWidth=1.5; ctx.stroke();
+    }
+    if(showNames||t.danger||AIS.sel===t.mmsi){
+      ctx.fillStyle=col;
+      ctx.fillText(t.name||String(t.mmsi), x+10, y-8);
+    }
+    ctx.globalAlpha=1;
+  }
+}
+function paintAis(){
+  const box=$('aisBox'); if(!box) return;
+  const list=aisList();
+  $('aisCount').textContent = AIS.status==='off'? 'not connected'
+    : list.length+' target'+(list.length===1?'':'s')+' · '+AIS.lines+' sentences';
+  if(!list.length){
+    box.innerHTML='<div class="empty">'+(AIS.status==='on'
+      ? 'Connected — waiting for traffic.' : 'No targets. Connect a source above.')+'</div>';
+    return;
+  }
+  box.innerHTML='<div class="wplist">'+list.slice(0,120).map(t=>{
+    const c=t.c;
+    const cpa = c&&c.tcpa!=null&&c.tcpa>=0 ? c.cpa.toFixed(2)+' NM in '+fmtDur(c.tcpa) : '—';
+    return '<div class="wp'+(t.danger?' next':'')+'" data-mmsi="'+t.mmsi+'">'+
+      '<div class="no">'+(t.classB?'B':t.aid?'A':'●')+'</div>'+
+      '<div><div class="nm">'+esc(t.name||String(t.mmsi))+(t.lost?' <span style="color:var(--faint)">(lost)</span>':'')+'</div>'+
+      '<div class="co">'+(c?deg3(c.brg)+' · '+fmtNM(c.range)+' NM':'—')+
+      (t.sog!=null?' · '+t.sog.toFixed(1)+' kn':'')+(t.cog!=null?' · '+deg3(t.cog):'')+'</div></div>'+
+      '<div class="leg"'+(t.danger?' style="color:var(--alert)"':'')+'>CPA<br>'+cpa+'</div></div>';
+  }).join('')+'</div>';
+}
+function aisStatus(txt,cls){
+  AIS.status=cls;
+  const el=$('aisState');
+  el.textContent=txt;
+  el.style.color = cls==='on'? COL['--own'] : cls==='err'? COL['--alert'] : COL['--faint'];
+}
+function aisDisconnect(){
+  try{ if(AIS.ws){ AIS.ws.onclose=null; AIS.ws.close(); } }catch(e){}
+  AIS.ws=null;
+  try{ if(AIS.reader) AIS.reader.cancel(); }catch(e){}
+  AIS.reader=null;
+  try{ if(AIS.port) AIS.port.close(); }catch(e){}
+  AIS.port=null;
+  if(AIS.replay){ clearInterval(AIS.replay); AIS.replay=null; }
+  aisStatus('not connected','off'); paintAis(); draw();
+}
+function aisConnectWs(url){
+  aisDisconnect();
+  if(location.protocol==='https:' && url.startsWith('ws://')){
+    aisStatus('blocked: this page is on https, the bridge is on ws://','err');
+    toast('Open Rhumb from the bridge\u2019s own http address instead');
+    return;
+  }
+  let ws;
+  try{ ws=new WebSocket(url); }catch(e){ aisStatus('bad address','err'); return; }
+  AIS.ws=ws; aisStatus('connecting…','off');
+  ws.onopen=()=>{ aisStatus('connected to '+url,'on'); toast('AIS feed connected'); };
+  ws.onmessage=e=>{ String(e.data).split(/\r?\n/).forEach(feedNmea); };
+  ws.onerror=()=>{ aisStatus('could not reach '+url,'err'); };
+  ws.onclose=()=>{ if(AIS.ws===ws){ aisStatus('disconnected','err'); AIS.ws=null; } };
+}
+async function aisConnectSerial(){
+  if(!('serial' in navigator)){ toast('This browser has no Web Serial (desktop Chrome only)'); return; }
+  aisDisconnect();
+  try{
+    const port=await navigator.serial.requestPort();
+    await port.open({baudRate:+($('inBaud').value)||38400});
+    AIS.port=port; aisStatus('connected to the serial port','on');
+    const dec=new TextDecoderStream();
+    port.readable.pipeTo(dec.writable).catch(()=>{});
+    const rd=dec.readable.getReader(); AIS.reader=rd;
+    let buf='';
+    while(true){
+      const {value,done}=await rd.read();
+      if(done) break;
+      buf+=value;
+      const lines=buf.split(/\r?\n/); buf=lines.pop();
+      lines.forEach(feedNmea);
+      paintAis();
+    }
+  }catch(e){ aisStatus(e.message||'serial failed','err'); }
+}
+function aisReplay(text,speed){
+  aisDisconnect();
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length){ toast('No sentences in that file'); return; }
+  let i=0;
+  aisStatus('replaying '+lines.length+' sentences','on');
+  AIS.replay=setInterval(()=>{
+    for(let k=0;k<speed&&i<lines.length;k++) feedNmea(lines[i++]);
+    paintAis(); draw();
+    if(i>=lines.length){ clearInterval(AIS.replay); AIS.replay=null; aisStatus('replay finished','off'); }
+  },200);
+}
+function checkAisAlarm(){
+  if(!S.aisAlarm) return null;
+  const list=aisList().filter(t=>t.danger);
+  if(!list.length) return null;
+  const t=list[0], c=t.c;
+  return {id:'ais'+t.mmsi, level:'alert',
+    txt:'Close quarters — '+(t.name||t.mmsi),
+    sub:'CPA '+c.cpa.toFixed(2)+' NM in '+fmtDur(c.tcpa)+' · bearing '+deg3(c.brg)+
+        ' · range '+fmtNM(c.range)+' NM'+(t.sog!=null?' · '+t.sog.toFixed(1)+' kn':'')};
 }
 
 /* ============================ reports ============================ */
@@ -2494,7 +3364,8 @@ function buildReport(kind){
       kpi([{k:'Distance run, 24 h',v:fmtNM(d24)+' NM',c:'#2ECC71'},
            {k:'Average speed',v:(avg!=null?avg.toFixed(1):'—')+' kn',c:'#12B5C8'},
            {k:'Distance to go',v:(n.dtg!=null?fmtNM(n.dtg):'—')+' NM',c:'#FF4FA3'},
-           {k:'ETA destination',v:n.eta?shipTime(n.eta):'—',c:'#7B2FF7'},
+           {k:'ETA destination',v:n.eta?destTime(n.eta):'—',
+            s:S.tzDest!=null&&S.tzDest!==S.tz? 'local '+tzLabel(destTz())+' · ship '+shipTime(n.eta||Date.now()):'ship\u2019s time',c:'#7B2FF7'},
            {k:'Passage complete',v:(n.pct!=null?n.pct.toFixed(1):'—')+' %',c:'#F2B33D'},
            {k:'Total run',v:fmtNM(S.runFromStart)+' NM',c:'#2E6FD6'}])+
       '<h2>Position at report</h2>'+
@@ -2505,19 +3376,37 @@ function buildReport(kind){
       (n.wpDist!=null?' — '+fmtNM(n.wpDist)+' NM to run':'')+'</td></tr>'+
       (first?'<tr><td>Position 24 hours ago</td><td>'+fmtLat(first.lat)+'&nbsp; '+fmtLon(first.lon)+'</td></tr>':'')+
       '<tr><td>Under way</td><td>'+(S.startedAt?fmtDur((Date.now()-S.startedAt)/3600e3):'—')+'</td></tr></tbody></table>'+
+      (f? '<h2>Sun</h2>'+(function(){
+        const e=sunEvents(Date.now(),f.lat,f.lon);
+        const T=ms=>ms==null?'--:--':zoneHM(ms,S.tz)+' <span style="color:'+RP.dim+'">('+zoneHM(ms,0)+'z)</span>';
+        return '<table><tbody>'+
+          (e.sunrise? '<tr><td>Sunrise / sunset</td><td>'+T(e.sunrise)+' brg '+deg3(e.riseAz)+
+            ' &nbsp;\u2014&nbsp; '+T(e.sunset)+' brg '+deg3(e.setAz)+'</td></tr>'
+           :'<tr><td>Sunrise / sunset</td><td>'+(e.sunrise_state==='always'?'sun does not set':'sun does not rise')+'</td></tr>')+
+          '<tr><td>Meridian passage</td><td>'+T(e.noon)+' &nbsp; altitude '+(e.noonAltPrecise||e.noonAlt).toFixed(2)+
+            '\u00b0 bearing '+deg3(e.noonAz)+'</td></tr>'+
+          '<tr><td>Nautical twilight</td><td>'+T(e.nauticalDawn)+' &nbsp;\u2014&nbsp; '+T(e.nauticalDusk)+'</td></tr>'+
+          '<tr><td>Declination</td><td>'+Math.abs(e.dec).toFixed(2)+'\u00b0 '+(e.dec>=0?'N':'S')+
+            ' &nbsp;\u00b7&nbsp; equation of time '+(e.EoT>=0?'+':'\u2212')+Math.abs(e.EoT).toFixed(1)+' min</td></tr>'+
+          '</tbody></table>';
+      })() : '')+
       '<h2>Last 24 hours</h2>'+speedSvg(760,170,{grid:RP.grid,ink:RP.dim})+
       '<h2>Chartlet</h2>'+miniChart(760,300,{})+DISCLAIM);
   }
   if(kind==='speed'){
     const bands=speedBands();
     const hrs=bands.reduce((a,b)=>a+b.hours,0);
+    const ss=speedStats();
     return reportShell('Speed Performance',sub,
-      kpi([{k:'Average SOG',v:(st?st.avg.toFixed(1):'—')+' kn',c:'#12B5C8'},
+      kpi([{k:'Average, under way',v:(ss?ss.avg.toFixed(1):st?st.avg.toFixed(1):'—')+' kn',
+            s:ss?'over '+fmtDur(ss.hrs)+' of fixes':'',c:'#12B5C8'},
            {k:'Best SOG',v:(st?st.max.toFixed(1):'—')+' kn',c:'#2ECC71'},
            {k:'Slowest',v:(st?st.min.toFixed(1):'—')+' kn',c:'#FF4D4D'},
            {k:'Planned',v:S.planSpeed.toFixed(1)+' kn',c:'#FF4FA3'},
            {k:'Speed made good',v:(smg()?smg().toFixed(1):'—')+' kn',c:'#7B2FF7'},
-           {k:'Hours observed',v:hrs.toFixed(1)+' h',c:'#F2B33D'}])+
+           {k:'Hours observed',v:hrs.toFixed(1)+' h',c:'#F2B33D'},
+           {k:'GPS coverage',v:(ss?ss.coverage.toFixed(0):'—')+' %',
+            s:ss&&ss.gaps?ss.gaps+' gap'+(ss.gaps>1?'s':'')+', '+fmtDur(ss.gap)+' unrecorded':'continuous',c:'#2E6FD6'}])+
       '<h2>Speed against time</h2>'+speedSvg(760,220,{grid:RP.grid,ink:RP.dim})+
       '<p style="font-size:10px;color:'+RP.dim+';margin:6px 0 0">The dashed magenta line is the planned speed of '+
       S.planSpeed.toFixed(1)+' kn.</p>'+
@@ -2550,7 +3439,8 @@ function buildReport(kind){
          {k:'SOG',v:(f&&f.sog!=null?f.sog.toFixed(1):'—')+' kn',c:'#2ECC71'},
          {k:'COG',v:f&&f.cog!=null?deg3(f.cog):'—',c:'#F2B33D'},
          {k:'Distance to go',v:(n.dtg!=null?fmtNM(n.dtg):'—')+' NM',c:'#FF4FA3'},
-         {k:'ETA destination',v:n.eta?shipTime(n.eta):'—',c:'#7B2FF7'},
+         {k:'ETA destination',v:n.eta?destTime(n.eta):'—',
+          s:S.tzDest!=null&&S.tzDest!==S.tz? tzLabel(destTz())+' · ship '+shipTime(n.eta):'ship\u2019s time',c:'#7B2FF7'},
          {k:'Time to go',v:n.ttg!=null?fmtDur(n.ttg):'—',c:'#2E6FD6'}])+
     '</div><div>'+donutSvg(n.pct,140)+'</div></div>'+
     '<h2>Where we are</h2>'+miniChart(760,340,{})+
@@ -2705,8 +3595,11 @@ if(window.innerWidth>820 && S.hud==='auto') S.hud='always';
 $('selHud').value=S.hud; $('inDwell').value=S.dwell; $('dwellLbl').textContent=S.dwell+' s';
 $('inFade').value=S.fade; $('fadeLbl').textContent=S.fade+' ms';
 applyFade(); applyHudMode();
+$('inAisUrl').value=S.aisUrl||('ws://'+(location.hostname||'192.168.1.50')+':8080/nmea');
+aisStatus('not connected','off'); paintAis();
+setKeepAwake(true,false);
 if(!isStandalone() && location.protocol==='https:') $('btnInstall').style.display='';
-setInterval(()=>{ if(S.fix) paint(); },10000);
+setInterval(()=>{ paintAis(); if(AIS.targets.size) draw(); if(S.fix) paint(); },5000);
 </script>
 </body>
 </html>

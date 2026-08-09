@@ -14,7 +14,8 @@ no chart licence.
 | `index.html` | The whole application, including the coastline data |
 | `manifest.webmanifest` | Lets Chrome install it as an app |
 | `sw.js` | Service worker — precaches everything for offline use |
-| `icon.svg`, `icons/`, `favicon.ico` | Compass-rose icon set |
+| `icon-*.png`, `icon.svg`, `favicon.ico` | Compass-rose icon set (keep these in the same folder) |
+| `nmea-bridge.py` | Hands a WiFi AIS transponder's NMEA feed to the browser |
 
 ## Publishing
 
@@ -22,6 +23,20 @@ Push these files to a GitHub repository, then **Settings → Pages → Deploy fr
 → `main` / `/ (root)`**. Wait for the green tick and open the published URL in Chrome.
 
 GPS only works over `https`, which GitHub Pages provides.
+
+## AIS
+
+A browser cannot open a raw TCP or UDP socket, so it cannot read a WiFi AIS
+transponder directly. Run the bridge on any machine on the ship's WiFi:
+
+    python3 nmea-bridge.py --tcp 192.168.1.1:39150      # most transponders
+    python3 nmea-bridge.py --udp 10110                  # units that broadcast
+
+Python 3.7+ and the standard library only — nothing to install. It prints the
+two addresses you need: one to open Rhumb, one to paste into AIS → Source.
+
+Position sentences in the same stream (`RMC`, `GGA`, `VTG`, `AIVDO`) are used as
+the ship's fix, so the app still knows where you are without browser GPS.
 
 ## Not a navigation system
 

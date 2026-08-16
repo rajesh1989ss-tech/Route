@@ -1,5 +1,5 @@
 /* Rhumb service worker — everything is precached so the app runs with no signal at sea. */
-const VERSION = 'rhumb-v7';
+const VERSION = 'rhumb-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -12,7 +12,7 @@ const ASSETS = [
   './icon-maskable-512.png',
   './apple-touch-icon.png',
   './favicon-32.png',
-  './icons/favicon-16.png'
+  './favicon-16.png'
 ];
 
 self.addEventListener('install', e => {

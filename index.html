@@ -3492,14 +3492,15 @@ $('btnInstall').onclick=async()=>{
   setTimeout(()=>{const d=$('diagBox'); if(d.scrollIntoView) d.scrollIntoView({behavior:'smooth',block:'center'});},120);
 };
 window.addEventListener('appinstalled',()=>{ $('btnInstall').style.display='none'; toast('Installed'); });
-if('serviceWorker' in navigator && location.protocol==='https:'){
+/* https, or localhost while you are testing — both count as a secure context */
+if('serviceWorker' in navigator && window.isSecureContext){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('sw.js',{scope:'./'})
       .then(r=>{swReg=r;})
       .catch(e=>{swError=e.message;});
   });
-} else if(location.protocol!=='https:'){
-  swError='the page is not on https (protocol is '+location.protocol+')';
+} else if(!window.isSecureContext){
+  swError='the page is not in a secure context (protocol is '+location.protocol+') — serve it over https';
 }
 
 /* Tells you exactly which install requirement is failing, instead of guessing. */
@@ -3510,7 +3511,8 @@ async function runDiag(){
   const add=(state,label,detail)=>R.push({state,label,detail:detail||''});
 
   if(isStandalone()) add('ok','Already running as an installed app','you are inside the installed window right now');
-  add(location.protocol==='https:'?'ok':'no','Served over https',location.origin+location.pathname);
+  add(window.isSecureContext?'ok':'no','Served over https',
+      location.origin+location.pathname+(location.protocol!=='https:'&&window.isSecureContext?' — localhost counts as secure':''));
 
   // a missing trailing slash breaks every relative path on the page
   const manUrl=new URL('manifest.json',location.href).href;

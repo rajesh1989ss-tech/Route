@@ -12,9 +12,11 @@ no chart licence.
 | File | What it is |
 |---|---|
 | `index.html` | The whole application, including the coastline data |
-| `manifest.webmanifest` | Lets Chrome install it as an app |
+| `manifest.json` | Lets Chrome install it as an app (the page links this one) |
+| `manifest.webmanifest` | Identical copy, for servers that only recognise this extension |
 | `sw.js` | Service worker — precaches everything for offline use |
 | `icon-*.png`, `icon.svg`, `favicon.ico` | Compass-rose icon set (keep these in the same folder) |
+| `screenshot-narrow.png` | Shown in Chrome for Android's install dialog |
 | `nmea-bridge.py` | Hands a WiFi AIS transponder's NMEA feed to the browser |
 
 ## Publishing
@@ -23,6 +25,19 @@ Push these files to a GitHub repository, then **Settings → Pages → Deploy fr
 → `main` / `/ (root)`**. Wait for the green tick and open the published URL in Chrome.
 
 GPS only works over `https`, which GitHub Pages provides.
+
+## Installing on Chrome for Android
+
+Open the published `https` URL, then **⋮ → Add to Home screen / Install app**. Chrome
+usually offers this by itself once the service worker has taken control — if it has not,
+reload once and try again.
+
+If Chrome only offers a plain bookmark, open **⚙ Settings → Install check → Run the
+check** inside the app. It tests every condition Chrome checks (https, manifest, icons,
+`start_url`, service worker) and names the one that is failing.
+
+Keep the trailing slash on the address — `…/route/`, not `…/route`. Without it every
+relative path, including the manifest, resolves against the parent folder.
 
 ## AIS
 
